@@ -727,6 +727,18 @@ function normalizeIndianWhatsAppNumber(rawPhone: string): string {
   if (digits.length === 10) return `91${digits}`;
   return digits;
 }
+const [isHeroMuted, setIsHeroMuted] = useState<boolean>(true);
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  const toggleHeroAudio = () => {
+    if (!heroVideoRef.current) return;
+    const nextMuted = !isHeroMuted;
+    heroVideoRef.current.muted = nextMuted;
+    if (!nextMuted) {
+      heroVideoRef.current.play();
+    }
+    setIsHeroMuted(nextMuted);
+  };
 
 export default function App() {
   const [activeMood, setActiveMood] = useState<string>('all');
@@ -946,6 +958,25 @@ For updates: +91 63803 94239
         </div>
 
         <h2 className="font-display font-bold text-3xl sm:text-5xl text-[#451A03] max-w-3xl mx-auto leading-tight">
+          <div className="relative max-w-5xl mx-auto mb-7 rounded-[28px] overflow-hidden border-4 border-[#451A03] shadow-[0_8px_0_#451A03] bg-[#FEF3C7]">
+        <video
+          ref={heroVideoRef}
+          src="/hero-yummy-cakes.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full h-[240px] sm:h-[360px] lg:h-[420px] object-cover block"
+        />
+
+        <button
+          type="button"
+          onClick={toggleHeroAudio}
+          className="absolute bottom-4 right-4 bg-[#FACC15] hover:bg-[#FDE047] text-[#451A03] font-display font-bold text-xs sm:text-sm px-4 py-2 rounded-2xl border-2 border-[#451A03] squishy-btn flex items-center gap-2 cursor-pointer"
+        >
+          <span>{isHeroMuted ? '🔇 Tap for Bakery Audio' : '🔊 Audio Playing'}</span>
+        </button>
+      </div>
           Pick Your <span className="bg-[#FACC15] px-3 py-0.5 rounded-2xl border-2 border-[#451A03] inline-block -rotate-1">Shin-chan Mood</span> &amp; Taste Pure Happiness!
         </h2>
 
