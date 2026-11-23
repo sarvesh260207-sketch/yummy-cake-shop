@@ -721,6 +721,20 @@ const CAKES_DATA = [
   { id: 8, name: 'Honey Butterscotch Jar Cake Trio', mood: 'misae', price: 540, weight: '3 Jars', badge: 'Cozy Pack', badgeBg: 'bg-[#FEF3C7] text-[#451A03]', image: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&q=85&w=700', description: 'Three layered glass jars of salted caramel butterscotch, golden honey sponge & praline crunch.' },
 ];
 
+async function sendOrderConfirmation(payload: Record<string, unknown>): Promise<boolean> {
+  try {
+    const r = await fetch('/api/send-whatsapp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json().catch(() => ({}));
+    return r.ok && d.ok === true;
+  } catch {
+    return false;
+  }
+}
+
 function normalizeIndianWhatsAppNumber(rawPhone: string): string {
   const digits = rawPhone.replace(/\D/g, '');
   if (!digits) return '';
@@ -971,6 +985,24 @@ For updates: +91 63803 94239
     });
 
     setToastText(`Booking #${orderId} Confirmed! 🎂`);
+
+    // Automatically text the customer their confirmation on WhatsApp
+    void sendOrderConfirmation({
+      orderId,
+      customerName,
+      customerPhone,
+      mode,
+      address,
+      deliveryTime,
+      total: grandTotal,
+      items: cartItems.map((i) => ({ name: i.name, weight: i.weight, qty: i.qty, price: i.price })),
+    }).then((ok) =>
+      setToastText(
+        ok
+          ? `WhatsApp confirmation sent to ${customerPhone} ✅`
+          : 'Booking confirmed! (Could not auto-send WhatsApp — use the Send button below.)'
+      )
+    );
   };
 
   const handleCopyBookingText = () => {
