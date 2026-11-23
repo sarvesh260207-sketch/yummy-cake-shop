@@ -727,20 +727,85 @@ function normalizeIndianWhatsAppNumber(rawPhone: string): string {
   if (digits.length === 10) return `91${digits}`;
   return digits;
 }
-export default function App() {
-  const [isHeroMuted, setIsHeroMuted] = useState<boolean>(true);
-  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
+function IntroVideo({ onFinish }: { onFinish: () => void }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [videoVisible, setVideoVisible] = useState(false);
+  const [muted, setMuted] = useState(true);
 
-  const toggleHeroAudio = () => {
-    if (!heroVideoRef.current) return;
-    const nextMuted = !isHeroMuted;
-    heroVideoRef.current.muted = nextMuted;
-    if (!nextMuted) {
-      heroVideoRef.current.play();
-    }
-    setIsHeroMuted(nextMuted);
+  // Lock page scroll while the intro is on screen
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  // Safety net: if the video never starts, don't trap the visitor on white
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!videoVisible) onFinish();
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [videoVisible, onFinish]);
+
+  const toggleSound = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setMuted(v.muted);
+    if (!v.muted) v.play().catch(() => {});
   };
 
+  return (
+    <motion.div
+      className="fixed inset-0 z-[9999] bg-white"
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 1.2, ease: 'easeInOut' }}
+    >
+      <video
+        ref={videoRef}
+        src="/hero-yummy-cakes.mp4"
+        autoPlay
+        muted
+        playsInline
+        preload="auto"
+        onPlaying={() => setVideoVisible(true)}
+        onEnded={onFinish}
+        onError={onFinish}
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{
+          opacity: videoVisible ? 1 : 0,
+          transition: 'opacity 1.2s ease-in-out',
+        }}
+      />
+
+      <div
+        className="absolute bottom-5 right-5 flex items-center gap-2 transition-opacity duration-700"
+        style={{ opacity: videoVisible ? 1 : 0 }}
+      >
+        <button
+          type="button"
+          onClick={toggleSound}
+          className="bg-[#FACC15] text-[#451A03] font-bold text-xs sm:text-sm px-4 py-2 rounded-2xl border-2 border-[#451A03] cursor-pointer"
+        >
+          {muted ? '🔇 Sound' : '🔊 Sound on'}
+        </button>
+        <button
+          type="button"
+          onClick={onFinish}
+          className="bg-white/90 text-[#451A03] font-bold text-xs sm:text-sm px-4 py-2 rounded-2xl border-2 border-[#451A03] cursor-pointer"
+        >
+          Skip ›
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+export default function App() {
+  const [showIntro, setShowIntro] = useState<boolean>(true);
   const [activeMood, setActiveMood] = useState<string>('all');
   const [bouncingTab, setBouncingTab] = useState<string | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -894,6 +959,10 @@ For updates: +91 63803 94239
     <div className="min-h-screen bg-gradient-to-b from-[#FFFBEB] via-[#FEF3C7]/70 to-[#FFFBEB] text-[#451A03] selection:bg-[#FACC15] selection:text-[#451A03]">
       <FontAndStyleInjector />
 
+      <AnimatePresence>
+        {showIntro && <IntroVideo onFinish={() => setShowIntro(false)} />}
+      </AnimatePresence>
+
       <div className="bg-[#451A03] text-[#FFFBEB] px-4 py-2 text-center text-xs sm:text-sm font-semibold flex flex-wrap items-center justify-center gap-2">
         <span className="text-[#FACC15] font-bold">★ Yummy Cake Shop • Chromepet, Chennai</span>
         <span className="hidden sm:inline opacity-40">•</span>
@@ -957,25 +1026,6 @@ For updates: +91 63803 94239
           </span>
         </div>
 
-          <div className="relative max-w-5xl mx-auto mb-7 rounded-[28px] overflow-hidden border-4 border-[#451A03] shadow-[0_8px_0_#451A03] bg-[#FEF3C7]">
-        <video
-          ref={heroVideoRef}
-          src="/hero-yummy-cakes.mp4"
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-[240px] sm:h-[360px] lg:h-[420px] object-cover block"
-        />
-
-        <button
-          type="button"
-          onClick={toggleHeroAudio}
-          className="absolute bottom-4 right-4 bg-[#FACC15] hover:bg-[#FDE047] text-[#451A03] font-display font-bold text-xs sm:text-sm px-4 py-2 rounded-2xl border-2 border-[#451A03] squishy-btn flex items-center gap-2 cursor-pointer"
-        >
-          <span>{isHeroMuted ? '🔇 Tap for Bakery Audio' : '🔊 Audio Playing'}</span>
-        </button>
-      </div>
 
         <h2 className="font-display font-bold text-3xl sm:text-5xl text-[#451A03] max-w-3xl mx-auto leading-tight">
           Pick Your <span className="bg-[#FACC15] px-3 py-0.5 rounded-2xl border-2 border-[#451A03] inline-block -rotate-1">Shin-chan Mood</span> &amp; Taste Pure Happiness!
