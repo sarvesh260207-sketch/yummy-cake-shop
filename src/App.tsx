@@ -730,7 +730,8 @@ function normalizeIndianWhatsAppNumber(rawPhone: string): string {
 function IntroVideo({ onFinish }: { onFinish: () => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [videoVisible, setVideoVisible] = useState(false);
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
+  const [soundBlocked, setSoundBlocked] = useState(false);
 
   // Lock page scroll while the intro is on screen
   useEffect(() => {
@@ -749,11 +750,44 @@ function IntroVideo({ onFinish }: { onFinish: () => void }) {
     return () => clearTimeout(t);
   }, [videoVisible, onFinish]);
 
+  // Try to start WITH sound. If the browser blocks it, fall back to muted
+  // playback and unmute on the visitor's first tap / click / key press.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = false;
+    v.volume = 1;
+
+    const unmuteOnInteraction = () => {
+      const vid = videoRef.current;
+      if (!vid) return;
+      vid.muted = false;
+      setMuted(false);
+      setSoundBlocked(false);
+      vid.play().catch(() => {});
+    };
+
+    v.play().catch(() => {
+      v.muted = true;
+      setMuted(true);
+      setSoundBlocked(true);
+      v.play().catch(() => {});
+      window.addEventListener('pointerdown', unmuteOnInteraction, { once: true });
+      window.addEventListener('keydown', unmuteOnInteraction, { once: true });
+    });
+
+    return () => {
+      window.removeEventListener('pointerdown', unmuteOnInteraction);
+      window.removeEventListener('keydown', unmuteOnInteraction);
+    };
+  }, []);
+
   const toggleSound = () => {
     const v = videoRef.current;
     if (!v) return;
     v.muted = !v.muted;
     setMuted(v.muted);
+    setSoundBlocked(false);
     if (!v.muted) v.play().catch(() => {});
   };
 
@@ -767,8 +801,6 @@ function IntroVideo({ onFinish }: { onFinish: () => void }) {
       <video
         ref={videoRef}
         src="/hero-yummy-cakes.mp4"
-        autoPlay
-        muted
         playsInline
         preload="auto"
         onPlaying={() => setVideoVisible(true)}
@@ -790,7 +822,7 @@ function IntroVideo({ onFinish }: { onFinish: () => void }) {
           onClick={toggleSound}
           className="bg-[#FACC15] text-[#451A03] font-bold text-xs sm:text-sm px-4 py-2 rounded-2xl border-2 border-[#451A03] cursor-pointer"
         >
-          {muted ? '🔇 Sound' : '🔊 Sound on'}
+          {muted ? (soundBlocked ? '🔇 Tap for sound' : '🔇 Sound off') : '🔊 Mute'}
         </button>
         <button
           type="button"
