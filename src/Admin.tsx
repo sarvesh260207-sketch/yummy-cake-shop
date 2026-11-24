@@ -79,7 +79,7 @@ function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
     if (data.ok) {
       setStep('code');
       setCooldown(30);
-      setMsg('If this number is authorised, a code was sent by SMS. It can take up to a minute.');
+      setMsg('If this number is authorised, a code was sent. Check your email (or SMS). It can take up to a minute.');
     } else {
       setMsg(data.error || 'Something went wrong');
     }
@@ -99,7 +99,7 @@ function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
       <div className="w-full max-w-sm bg-white rounded-3xl border-2 border-[#451A03] p-6 shadow-lg">
         <div className="text-4xl mb-1">🎂</div>
         <h1 className="text-2xl font-extrabold text-[#451A03]">Yummy Cakes Admin</h1>
-        <p className="text-sm text-[#78350F] mb-5">Sign in with a code sent to your phone by SMS.</p>
+        <p className="text-sm text-[#78350F] mb-5">Enter your admin mobile number. We'll send a one-time code.</p>
 
         {step === 'phone' ? (
           <>
@@ -119,7 +119,7 @@ function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
               disabled={busy || phone.replace(/\D/g, '').length < 10}
               className="mt-4 w-full py-3 rounded-2xl bg-[#FACC15] border-2 border-[#451A03] font-extrabold text-[#451A03] disabled:opacity-50 cursor-pointer"
             >
-              {busy ? 'Sending…' : 'Send code by SMS'}
+              {busy ? 'Sending…' : 'Send code'}
             </button>
           </>
         ) : (

@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { adminPhone, clientIp, hashOtp, normalizePhone, parseBody, rateLimited } from '../_lib/auth.js';
 import { redis, redisConfigured } from '../_lib/redis.js';
+import { emailConfigured, sendEmailOtp } from '../_lib/email.js';
 import { sendSmsOtp, smsConfigured } from '../_lib/sms.js';
 import { sendOtp } from '../_lib/whatsapp.js';
 
@@ -25,15 +26,18 @@ export default async function handler(req: any, res: any) {
     if (phone === adminPhone()) {
       const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
       await redis(['SET', `otp:${phone}`, hashOtp(phone, code), 'EX', 300]);
-      // SMS by default; set OTP_CHANNEL=whatsapp to use the WhatsApp template instead
-      const channel = process.env.OTP_CHANNEL || (smsConfigured() ? 'sms' : 'whatsapp');
-      const sent = channel === 'whatsapp' ? await sendOtp(phone, code) : await sendSmsOtp(phone, code);
+      // Channel: OTP_CHANNEL (email | sms | whatsapp) or, if unset, the first one configured
+      const channel = process.env.OTP_CHANNEL || (emailConfigured() ? 'email' : smsConfigured() ? 'sms' : 'whatsapp');
+      const sent =
+        channel === 'email' ? await sendEmailOtp(code)
+        : channel === 'sms' ? await sendSmsOtp(phone, code)
+        : await sendOtp(phone, code);
       if (!sent.ok) {
         console.error('OTP send failed:', sent.error);
         return res.status(502).json({ ok: false, error: 'Could not send the code. Please try again.' });
       }
     }
-    return res.status(200).json({ ok: true, message: 'If this number is authorised, a code has been sent by SMS.' });
+    return res.status(200).json({ ok: true, message: 'If this number is authorised, a code has been sent.' });
   } catch (err) {
     console.error('otp-request error', err);
     return res.status(500).json({ ok: false, error: 'Server error' });
