@@ -1056,7 +1056,7 @@ export default function App() {
           aria-hidden="true"
           className={`shinchan-cycle-prop ${cyclePass.direction === 'ltr' ? 'shinchan-cycle-ltr' : 'shinchan-cycle-rtl'}`}
         >
-          <img src="/shinchan-bike.svg" alt="" draggable={false} />
+          <video src="/shinchan-site.webm" aria-hidden="true" autoPlay muted loop playsInline preload="auto" />
         </div>
       )}
 
