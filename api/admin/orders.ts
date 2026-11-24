@@ -9,7 +9,7 @@ export default async function handler(req: any, res: any) {
 
   try {
     if (req.method === 'GET') {
-      const ids: string[] = (await redis(['ZREVRANGE', 'orders:index', 0, 199])) || [];
+      const ids: string[] = (await redis(['ZREVRANGE', 'orders:index', 0, 9999])) || [];
       const rows: (string | null)[] = ids.length ? await redis(['MGET', ...ids.map((id) => `order:${id}`)]) : [];
       const orders = rows.filter((r): r is string => !!r).map((r) => JSON.parse(r));
       return res.status(200).json({ ok: true, orders });
