@@ -14,6 +14,8 @@ interface CartItem {
   qty: number;
 }
 
+interface CustomerOrder { id:string; customerName:string; items:{name:string;weight:string;qty:number;price:number}[]; total:number; mode:string; deliveryTime:string; status:string; createdAt:string; updatedAt:string; history:{status:string;at:string}[]; }
+
 interface BookingSummary {
   orderId: string;
   bookingTime: string;
@@ -722,11 +724,13 @@ async function submitOrder(
       body: JSON.stringify(payload),
     });
     const d = await r.json().catch(() => ({}));
-    return r.ok && d.ok === true ? { ok: true, orderId: d.orderId, whatsappSent: d.whatsappSent } : { ok: false };
+    return r.ok && d.ok === true ? { ok: true, orderId: d.orderId, whatsappSent: d.whatsappSent } : { ok: false, error: d.error || 'Order could not be saved' };
   } catch {
     return { ok: false };
   }
 }
+
+async function fetchCustomerOrder(id:string, phone:string):Promise<{ok:boolean;order?:CustomerOrder;error?:string}>{ try { const q=new URLSearchParams({id,phone}); const r=await fetch('/api/orders?'+q.toString()); const d=await r.json().catch(()=>({})); return r.ok&&d.ok?{ok:true,order:d.order}:{ok:false,error:d.error||'Order not found'}; } catch { return {ok:false,error:'Could not connect to the shop'}; } }
 
 function CakeImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
   const [failed, setFailed] = useState(false);
@@ -895,6 +899,10 @@ export default function App() {
   const [cartBounceKey, setCartBounceKey] = useState<number>(0);
   const [toastText, setToastText] = useState<string | null>(null);
   const [bookingSummary, setBookingSummary] = useState<BookingSummary | null>(null);
+  const [myPageOpen,setMyPageOpen]=useState(false);
+  const [lookupId,setLookupId]=useState(''); const [lookupPhone,setLookupPhone]=useState('');
+  const [customerOrder,setCustomerOrder]=useState<CustomerOrder|null>(null);
+  const [lookupLoading,setLookupLoading]=useState(false); const [lookupError,setLookupError]=useState(''); const [orderSubmitting,setOrderSubmitting]=useState(false);
 
   const menuSectionRef = useRef<HTMLElement | null>(null);
 
@@ -956,100 +964,30 @@ export default function App() {
     }, 220);
   };
 
-  const handleBookCake = () => {
-    if (cartItems.length === 0) {
-      setToastText('Add a cake to your box first!');
-      return;
-    }
-
-    const customerName = (document.getElementById('cust-name') as HTMLInputElement | null)?.value.trim() || '';
-    const customerPhone = (document.getElementById('cust-phone') as HTMLInputElement | null)?.value.trim() || '';
-    const mode = (document.getElementById('cust-mode') as HTMLSelectElement | null)?.value || 'Delivery';
-    const address = (document.getElementById('cust-address') as HTMLInputElement | null)?.value.trim() || 'Chrompet, Chennai';
-
-    if (!customerName || !customerPhone) {
-      setToastText('Please enter your Name & Phone Number to book.');
-      return;
-    }
-
-    const orderId = 'YCS-' + Math.floor(100000 + Math.random() * 900000);
-    const now = new Date();
-    const bookingTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    const deliveryTime = new Date(now.getTime() + 45 * 60000).toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
-    const itemsText = cartItems
-      .map((item, i) => `${i + 1}. ${item.name} (${item.weight}) x ${item.qty} = ₹${item.price * item.qty}`)
-      .join('\n');
-
-    const chrompetMap = 'https://maps.google.com/?q=Chrompet,+Chennai,+Tamil+Nadu+600044';
-    const locationLine =
-      mode === 'Pickup'
-        ? `Pickup Store: Yummy Cake Shop, GST Road, Chromepet\nMap: ${chrompetMap}`
-        : `Delivery Address: ${address}`;
-
-    const cleanMessage = `🎂 *YUMMY CAKE SHOP (CHROMEPET) - BOOKING CONFIRMED*
-Hello *${customerName}*! Your order is locked in.
-
-*Booking ID:* #${orderId}
-*Booked At:* ${bookingTime}
-*Est. ${mode} Time:* ${deliveryTime} (~45 mins)
-*Mode:* ${mode}
-
-*Order Details:*
-${itemsText}
-
-*Total Payable:* ₹${grandTotal}
-${locationLine}
-
-For updates: +91 63803 94239
-நாவின் சுவை அரும்புகள் மலரட்டும்`;
-
-    setBookingSummary({
-      orderId,
-      bookingTime,
-      deliveryTime,
-      customerName,
-      customerPhone,
-      mode,
-      address,
-      totalAmount: grandTotal,
-      itemsText,
-      cleanMessage,
-    });
-
-    setToastText(`Booking #${orderId} Confirmed! 🎂`);
-
-    // Save the order for the admin dashboard and text the customer on WhatsApp
-    void submitOrder({
-      orderId,
-      customerName,
-      customerPhone,
-      mode,
-      address,
-      deliveryTime,
-      total: grandTotal,
-      items: cartItems.map((i) => ({ name: i.name, weight: i.weight, qty: i.qty, price: i.price })),
-    }).then((res) => {
-      if (!res.ok) {
-        setToastText('Booking confirmed! (Could not reach the shop system — please use the Send button below.)');
-        return;
-      }
-      if (res.orderId && res.orderId !== orderId) {
-        const newId = res.orderId;
-        setBookingSummary((prev) =>
-          prev ? { ...prev, orderId: newId, cleanMessage: prev.cleanMessage.replace(`#${orderId}`, `#${newId}`) } : prev
-        );
-      }
-      setToastText(
-        res.whatsappSent
-          ? `Order placed! WhatsApp confirmation sent to ${customerPhone} ✅`
-          : 'Order placed! (WhatsApp text could not be sent — use the Send button below.)'
-      );
-    });
+  const handleBookCake = async () => {
+    if(orderSubmitting)return; if(!cartItems.length){setToastText('Add a cake to your box first!');return;}
+    const customerName=(document.getElementById('cust-name') as HTMLInputElement|null)?.value.trim()||'';
+    const customerPhone=(document.getElementById('cust-phone') as HTMLInputElement|null)?.value.trim()||'';
+    const mode=(document.getElementById('cust-mode') as HTMLSelectElement|null)?.value||'Delivery';
+    const address=(document.getElementById('cust-address') as HTMLInputElement|null)?.value.trim()||'Chrompet, Chennai';
+    const digits=customerPhone.replace(/\D/g,''); if(!customerName||!/^(?:[6-9]\d{9}|91[6-9]\d{9})$/.test(digits)){setToastText('Enter your name and a valid Indian mobile number.');return;}
+    setOrderSubmitting(true);setBookingSummary(null);setToastText('Saving your order…');
+    const requestedId='YCS-'+Math.floor(100000+Math.random()*900000); const now=new Date();
+    const bookingTime=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    const deliveryTime=new Date(now.getTime()+45*60000).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    const itemsText=cartItems.map((item,i)=>`${i+1}. ${item.name} (${item.weight}) x ${item.qty} = ₹${item.price*item.qty}`).join('\n');
+    const result=await submitOrder({orderId:requestedId,customerName,customerPhone,mode,address,deliveryTime,total:grandTotal,items:cartItems.map(i=>({name:i.name,weight:i.weight,qty:i.qty,price:i.price}))});
+    setOrderSubmitting(false); if(!result.ok||!result.orderId){setToastText(result.error||'Order was not placed. Please try again.');return;}
+    const finalId=result.orderId; const map='https://maps.google.com/?q=Chrompet,+Chennai,+Tamil+Nadu+600044';
+    const locationLine=mode==='Pickup'?`Pickup Store: Yummy Cake Shop, GST Road, Chromepet\nMap: ${map}`:`Delivery Address: ${address}`;
+    const cleanMessage=`🎂 *YUMMY CAKE SHOP (CHROMEPET) - ORDER RECEIVED*\nHello *${customerName}*! We have received your order.\n\n*Booking ID:* #${finalId}\n*Booked At:* ${bookingTime}\n*Est. ${mode} Time:* ${deliveryTime}\n*Mode:* ${mode}\n\n*Order Details:*\n${itemsText}\n\n*Total Payable:* ₹${grandTotal}\n${locationLine}\n\nFor updates: +91 63803 94239`;
+    setBookingSummary({orderId:finalId,bookingTime,deliveryTime,customerName,customerPhone,mode,address,totalAmount:grandTotal,itemsText,cleanMessage});
+    try{localStorage.setItem('ycs_last_order',JSON.stringify({id:finalId,phone:customerPhone}));}catch{}
+    setLookupId(finalId);setLookupPhone(customerPhone);setCustomerOrder(null);setCartItems([]);
+    setToastText(result.whatsappSent?`Order ${finalId} saved! WhatsApp confirmation sent.`:`Order ${finalId} saved! Track it in My Page.`);
   };
+  const handleLookupOrder=async()=>{if(!lookupId.trim()||!lookupPhone.trim()){setLookupError('Enter order ID and checkout mobile number.');return;}setLookupLoading(true);setLookupError('');setCustomerOrder(null);const r=await fetchCustomerOrder(lookupId,lookupPhone);setLookupLoading(false);if(!r.ok||!r.order){setLookupError(r.error||'Order not found');return;}setCustomerOrder(r.order);try{localStorage.setItem('ycs_last_order',JSON.stringify({id:r.order.id,phone:lookupPhone}));}catch{}};
+  useEffect(()=>{try{const saved=JSON.parse(localStorage.getItem('ycs_last_order')||'null');if(saved?.id&&saved?.phone){setLookupId(saved.id);setLookupPhone(saved.phone);}}catch{}},[]);
 
   const handleCopyBookingText = () => {
     if (!bookingSummary) return;
@@ -1106,6 +1044,7 @@ For updates: +91 63803 94239
               <span>⚡ Custom Hero Cake</span>
             </a>
 
+            <button type="button" onClick={()=>{setMyPageOpen(true);setCustomerOrder(null);setLookupError('');}} className="bg-white text-[#451A03] border-2 border-[#451A03] px-3 py-2.5 rounded-2xl font-bold text-sm">My Page</button>
             <motion.button
               key={cartBounceKey}
               animate={cartBounceKey > 0 ? { scale: [1, 1.22, 0.92, 1.08, 1], rotate: [0, -6, 6, -2, 0] } : {}}
@@ -1405,9 +1344,10 @@ For updates: +91 63803 94239
                   <button
                     type="button"
                     onClick={handleBookCake}
-                    className="w-full bg-[#FACC15] hover:bg-[#FDE047] text-[#451A03] font-display font-bold text-base py-3.5 rounded-2xl border-2 border-[#451A03] squishy-btn flex items-center justify-center gap-2 cursor-pointer"
+                    disabled={orderSubmitting}
+                    className="w-full disabled:opacity-60 bg-[#FACC15] hover:bg-[#FDE047] text-[#451A03] font-display font-bold text-base py-3.5 rounded-2xl border-2 border-[#451A03] squishy-btn flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>Book</span>
+                    <span>{orderSubmitting?'Saving order…':'Place Order'}</span>
                     <span>✓</span>
                   </button>
 
@@ -1415,7 +1355,7 @@ For updates: +91 63803 94239
                     <div className="bg-[#FFFBEB] border-2 border-[#451A03] rounded-2xl p-3.5 space-y-2.5 text-left shadow-sm">
                       <div className="flex items-center justify-between">
                         <span className="font-display font-bold text-sm text-[#451A03]">
-                          Booking Confirmed • #{bookingSummary.orderId}
+                          Order Received • #{bookingSummary.orderId}
                         </span>
                         <span className="bg-[#4ADE80] text-[#451A03] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-[#451A03]">
                           ETA {bookingSummary.deliveryTime}
@@ -1451,6 +1391,21 @@ For updates: +91 63803 94239
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {myPageOpen && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[60] bg-[#451A03]/70 p-3 flex items-center justify-center" onClick={e=>{if(e.target===e.currentTarget)setMyPageOpen(false);}}>
+          <motion.section className="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-[#FFFBEB] border-4 border-[#451A03] rounded-[28px] p-5 shadow-2xl">
+            <div className="flex justify-between mb-4"><div><h2 className="font-display text-3xl font-extrabold">My Page</h2><p className="text-sm text-[#78350F]">Track your cake order.</p></div><button type="button" onClick={()=>setMyPageOpen(false)} className="text-2xl">×</button></div>
+            <form onSubmit={e=>{e.preventDefault();void handleLookupOrder();}} className="space-y-3">
+              <label className="block text-sm font-bold">Order ID<input value={lookupId} onChange={e=>setLookupId(e.target.value.toUpperCase())} placeholder="YCS-123456" className="mt-1 w-full rounded-xl border-2 border-[#451A03] bg-white p-3" /></label>
+              <label className="block text-sm font-bold">Checkout mobile number<input value={lookupPhone} onChange={e=>setLookupPhone(e.target.value)} inputMode="tel" placeholder="10-digit mobile number" className="mt-1 w-full rounded-xl border-2 border-[#451A03] bg-white p-3" /></label>
+              <button disabled={lookupLoading} className="w-full rounded-xl border-2 border-[#451A03] bg-[#FACC15] p-3 font-extrabold">{lookupLoading?'Checking…':'Track My Order'}</button>
+            </form>
+            {lookupError&&<p role="alert" className="mt-3 rounded-xl bg-red-50 text-red-800 p-3 text-sm">{lookupError}</p>}
+            {customerOrder&&<div className="mt-4 rounded-2xl border-2 border-[#451A03] bg-white p-4 space-y-3"><div><p className="text-xs text-[#78350F]">#{customerOrder.id}</p><h3 className="font-display text-2xl font-extrabold">{customerOrder.status}</h3><p className="text-xs text-[#78350F]">Last updated {new Date(customerOrder.updatedAt).toLocaleString('en-IN')}</p></div><div className="space-y-1 text-sm">{customerOrder.items.map((i,n)=><div key={n} className="flex justify-between"><span>{i.name} × {i.qty}</span><b>₹{(i.price*i.qty).toLocaleString('en-IN')}</b></div>)}<div className="border-t pt-2 flex justify-between font-extrabold"><span>Total</span><span>₹{customerOrder.total.toLocaleString('en-IN')}</span></div></div><b className="text-sm">Status history</b><ol className="space-y-2">{customerOrder.history.map((x,n)=><li key={n} className="text-sm">🟢 {x.status}<span className="block text-xs text-[#78350F]">{new Date(x.at).toLocaleString('en-IN')}</span></li>)}</ol><button type="button" onClick={()=>void handleLookupOrder()} className="w-full border-2 border-[#451A03] rounded-xl bg-[#FEF3C7] p-2 font-bold">Refresh status</button></div>}
+            <p className="mt-4 text-xs text-[#78350F]">Order ID and the same mobile number used at checkout are required for privacy.</p>
+          </motion.section>
+        </motion.div>}
+      </AnimatePresence>
       <AnimatePresence>
         {toastText && (
           <motion.div
