@@ -910,7 +910,7 @@ export default function App() {
   const menuSectionRef = useRef<HTMLElement | null>(null);
   const heroSectionRef = useRef<HTMLElement | null>(null);
   const cyclePassIndexRef = useRef(0);
-  const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.replace(/\\/+$/, '') === '/admin';
+  const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/admin';
 
   useEffect(() => {
     const hero = heroSectionRef.current;
