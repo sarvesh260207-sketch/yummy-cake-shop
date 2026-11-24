@@ -267,7 +267,6 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
     onLoggedOut();
   };
 
-  const shown = tab === 'active' ? active : done;
 
   return (
     <div className="min-h-screen bg-[#FFFBEB] text-[#451A03]">
@@ -280,7 +279,13 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto p-4">
+      <main className="max-w-5xl mx-auto p-4">
+        <div className="flex flex-wrap gap-2 mb-5">
+          {([{ id: 'orders', label: 'Orders' }, { id: 'products', label: 'Ordered cakes' }, { id: 'assistant', label: 'AI business assistant' }] as const).map((item) => (
+            <button key={item.id} onClick={() => setView(item.id)} className={`px-4 py-2 rounded-full border-2 border-[#451A03] font-bold cursor-pointer ${view === item.id ? 'bg-[#FACC15]' : 'bg-white'}`}>{item.label}</button>
+          ))}
+        </div>
+        {view === 'orders' && <section>
         <div className="flex gap-2 mb-4">
           {(['active', 'done'] as const).map((t) => (
             <button
@@ -363,6 +368,12 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
             </article>
           ))}
         </div>
+        </section>}
+        {view === 'products' && <section className="space-y-4">
+          <div className="bg-white border-2 border-[#451A03] rounded-2xl p-4"><h2 className="text-xl font-extrabold">Cakes customers actually ordered</h2><p className="text-sm text-[#78350F] mt-1">Built only from completed and active orders submitted through the website database. No sample products or fake figures.</p><div className="mt-3 text-sm font-bold">Based on {orders.length} stored website orders · all amounts in INR</div></div>
+          {productSummary.length === 0 ? <p className="bg-white rounded-2xl p-8 text-center font-semibold">No cake items have been ordered through the website yet.</p> : productSummary.map((p) => <article key={p.name} className="bg-white border-2 border-[#451A03] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-extrabold text-lg">{p.name}</h3><p className="text-sm text-[#78350F]">{p.orderCount} orders · {p.quantity} units ordered</p></div><div className="font-extrabold">Recorded item value: {money(p.revenue)}</div></article>)}
+        </section>}
+        {view === 'assistant' && <section className="bg-white border-2 border-[#451A03] rounded-2xl p-4"><h2 className="text-xl font-extrabold">AI business assistant</h2><p className="text-sm text-[#78350F] mt-1">Grounded answers calculated from actual website order records. It will not invent data, costs or profit.</p><div className="grid grid-cols-2 md:grid-cols-4 gap-2 my-4">{[{label:'Stored orders',value:String(orders.length)},{label:'Active orders',value:String(active.length)},{label:'Completed revenue',value:money(paidRevenue)},{label:'Ordered cake types',value:String(productSummary.length)}].map((x) => <div key={x.label} className="rounded-xl bg-[#FFFBEB] p-3"><div className="text-xs text-[#78350F]">{x.label}</div><div className="font-extrabold break-words">{x.value}</div></div>)}</div><div className="min-h-32 max-h-80 overflow-y-auto space-y-2 rounded-xl bg-[#FFFBEB] p-3 mb-3">{answers.length ? answers.map((a,i) => <p key={i} className="text-sm whitespace-pre-wrap">{a}</p>) : <p className="text-sm text-[#78350F]">Ask about revenue, pending orders, best-selling cake, repeat customers, cancellations or average order value.</p>}</div><form onSubmit={(e) => { e.preventDefault(); answerQuestion(); }} className="flex flex-col sm:flex-row gap-2"><input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask about your real orders…" className="flex-1 rounded-xl border-2 border-[#451A03] px-3 py-3 outline-none"/><button type="submit" className="rounded-xl border-2 border-[#451A03] bg-[#FACC15] px-5 py-3 font-extrabold">Ask</button></form></section>}
       </main>
     </div>
   );
