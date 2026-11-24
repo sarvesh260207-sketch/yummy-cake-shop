@@ -1,1 +1,42 @@
 @import "tailwindcss";
+
+@keyframes shinchanPassLeftToRight {
+  0% { transform: translate3d(-240px, 0, 0); }
+  50% { transform: translate3d(calc(50vw - 90px), -8px, 0); }
+  100% { transform: translate3d(calc(100vw + 240px), 0, 0); }
+}
+
+@keyframes shinchanPassRightToLeft {
+  0% { transform: translate3d(calc(100vw + 240px), 0, 0) scaleX(-1); }
+  50% { transform: translate3d(calc(50vw - 90px), -8px, 0) scaleX(-1); }
+  100% { transform: translate3d(-240px, 0, 0) scaleX(-1); }
+}
+
+.shinchan-cycle-prop {
+  position: fixed;
+  left: 0;
+  bottom: 1.5rem;
+  z-index: 35;
+  width: 9rem;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+  filter: drop-shadow(0 6px 3px rgba(69, 26, 3, 0.22));
+}
+
+.shinchan-cycle-prop img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.shinchan-cycle-ltr { animation: shinchanPassLeftToRight 5s linear forwards; }
+.shinchan-cycle-rtl { animation: shinchanPassRightToLeft 5s linear forwards; }
+
+@media (min-width: 640px) {
+  .shinchan-cycle-prop { width: 11rem; bottom: 2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shinchan-cycle-prop { animation-duration: 5s; }
+}

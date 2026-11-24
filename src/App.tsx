@@ -892,6 +892,9 @@ function IntroVideo({ onFinish }: { onFinish: () => void }) {
 
 export default function App() {
   const [showIntro, setShowIntro] = useState<boolean>(true);
+  const [isInHeroSection, setIsInHeroSection] = useState<boolean>(true);
+  const [cyclePass, setCyclePass] = useState<{ active: boolean; direction: 'ltr' | 'rtl'; runId: number }>({ active: false, direction: 'ltr', runId: 0 });
+
   const [activeMood, setActiveMood] = useState<string>('all');
   const [bouncingTab, setBouncingTab] = useState<string | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -905,6 +908,46 @@ export default function App() {
   const [lookupLoading,setLookupLoading]=useState(false); const [lookupError,setLookupError]=useState(''); const [orderSubmitting,setOrderSubmitting]=useState(false);
 
   const menuSectionRef = useRef<HTMLElement | null>(null);
+  const heroSectionRef = useRef<HTMLElement | null>(null);
+  const cyclePassIndexRef = useRef(0);
+  const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.replace(/\\/+$/, '') === '/admin';
+
+  useEffect(() => {
+    const hero = heroSectionRef.current;
+    if (!hero || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsInHeroSection(entry.isIntersecting),
+      { threshold: 0.25 }
+    );
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const canShowCycle = !isAdminRoute && !showIntro && !isCartOpen && !myPageOpen && !isInHeroSection;
+    if (!canShowCycle) {
+      setCyclePass((previous) => previous.active ? { ...previous, active: false } : previous);
+      return;
+    }
+
+    let hideTimer: number | undefined;
+    const triggerPass = () => {
+      const direction: 'ltr' | 'rtl' = cyclePassIndexRef.current % 2 === 0 ? 'ltr' : 'rtl';
+      cyclePassIndexRef.current += 1;
+      setCyclePass((previous) => ({ active: true, direction, runId: previous.runId + 1 }));
+      if (hideTimer !== undefined) window.clearTimeout(hideTimer);
+      hideTimer = window.setTimeout(() => {
+        setCyclePass((previous) => ({ ...previous, active: false }));
+      }, 5000);
+    };
+
+    const intervalId = window.setInterval(triggerPass, 15000);
+    return () => {
+      window.clearInterval(intervalId);
+      if (hideTimer !== undefined) window.clearTimeout(hideTimer);
+    };
+  }, [isAdminRoute, showIntro, isCartOpen, myPageOpen, isInHeroSection]);
+
 
   const filteredCakes =
     activeMood === 'all'
@@ -1007,6 +1050,17 @@ export default function App() {
     <div className="min-h-screen bg-gradient-to-b from-[#FFFBEB] via-[#FEF3C7]/70 to-[#FFFBEB] text-[#451A03] selection:bg-[#FACC15] selection:text-[#451A03]">
       <FontAndStyleInjector />
 
+      {!isAdminRoute && !showIntro && !isCartOpen && !myPageOpen && !isInHeroSection && cyclePass.active && (
+        <div
+          key={cyclePass.runId}
+          aria-hidden="true"
+          className={`shinchan-cycle-prop ${cyclePass.direction === 'ltr' ? 'shinchan-cycle-ltr' : 'shinchan-cycle-rtl'}`}
+        >
+          <img src="/shinchan-bike.svg" alt="" draggable={false} />
+        </div>
+      )}
+
+
       <AnimatePresence>
         {showIntro && <IntroVideo onFinish={() => setShowIntro(false)} />}
       </AnimatePresence>
@@ -1067,7 +1121,7 @@ export default function App() {
         </div>
       </header>
 
-      <section className="pt-10 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
+      <section ref={heroSectionRef} className="pt-10 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 bg-white border-2 border-[#FDE68A] px-4 py-1.5 rounded-full shadow-xs mb-4">
           <span className="w-2.5 h-2.5 rounded-full bg-[#4ADE80] animate-ping" />
           <span className="text-xs font-extrabold uppercase tracking-wider text-[#451A03]">

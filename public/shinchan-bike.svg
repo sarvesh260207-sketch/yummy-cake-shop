@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 430" role="img" aria-label="Cartoon boy riding a white bicycle">
+  <defs>
+    <linearGradient id="skin" x2="0" y2="1"><stop stop-color="#ffd2ad"/><stop offset="1" stop-color="#f5a77d"/></linearGradient>
+    <linearGradient id="bike" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#cbd5e1"/></linearGradient>
+  </defs>
+  <g fill="none" stroke="#242124" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="170" cy="320" r="91" fill="#f8fafc" stroke-width="13"/>
+    <circle cx="535" cy="320" r="91" fill="#f8fafc" stroke-width="13"/>
+    <circle cx="170" cy="320" r="76" stroke="#9ca3af" stroke-width="5"/>
+    <circle cx="535" cy="320" r="76" stroke="#9ca3af" stroke-width="5"/>
+    <g stroke="#9ca3af" stroke-width="3"><path d="M170 244V396M94 320H246M116 266L224 374M224 266L116 374M535 244V396M459 320H611M481 266L589 374M589 266L481 374"/></g>
+    <path d="M170 320L310 320L405 205L535 320L310 320L280 210L405 205" fill="url(#bike)" stroke-width="12"/>
+    <path d="M280 210L260 180M245 178H285M535 320L555 180L585 165M570 164H608" stroke-width="10"/>
+    <circle cx="310" cy="320" r="24" fill="#94a3b8" stroke-width="8"/>
+    <path d="M310 320L352 357M352 357L374 350" stroke-width="8"/>
+    <path d="M265 205L242 190" stroke-width="10"/>
+  </g>
+  <path d="M230 145Q190 105 210 65Q230 18 310 24L395 42Q442 52 442 108L420 164L292 177Z" fill="#f5bd16" stroke="#242124" stroke-width="9" stroke-linejoin="round"/>
+  <path d="M224 83L296 100L281 160L214 139Z" fill="#ffd33d" stroke="#242124" stroke-width="6"/>
+  <path d="M270 155Q295 118 363 133L430 177L409 246L300 246L250 207Z" fill="#ed1725" stroke="#242124" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M304 218L405 213L449 244L420 267L328 260Z" fill="#ed1725" stroke="#242124" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M302 238Q349 244 386 263L366 299L292 290L260 267Z" fill="#ffdc37" stroke="#242124" stroke-width="9"/>
+  <path d="M353 270L395 279L380 316L344 307Z" fill="url(#skin)" stroke="#242124" stroke-width="8"/>
+  <path d="M360 305L397 309L411 327L373 337L350 326Z" fill="#ffca21" stroke="#242124" stroke-width="8"/>
+  <path d="M383 170L465 195L493 222L473 239L438 220L394 209" fill="url(#skin)" stroke="#242124" stroke-width="9" stroke-linejoin="round"/>
+  <path d="M461 197L512 191L538 204L526 220L488 221" fill="url(#skin)" stroke="#242124" stroke-width="8"/>
+  <path d="M280 173Q248 146 253 91Q258 24 333 18Q408 9 450 63Q477 98 453 151Q434 190 372 188L314 184Z" fill="url(#skin)" stroke="#242124" stroke-width="10"/>
+  <path d="M257 78Q255 18 323 12Q367 4 395 23Q365 20 355 50Q332 33 310 54Q288 38 257 78Z" fill="#171717" stroke="#171717" stroke-width="8"/>
+  <path d="M386 23Q428 13 449 63Q426 47 410 56Q400 36 386 23Z" fill="#171717" stroke="#171717" stroke-width="8"/>
+  <path d="M293 99Q318 78 341 101M382 98Q407 78 428 101" fill="none" stroke="#242124" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="320" cy="119" rx="13" ry="17" fill="#171717"/><ellipse cx="401" cy="119" rx="13" ry="17" fill="#171717"/>
+  <circle cx="324" cy="113" r="4" fill="#fff" stroke="none"/><circle cx="405" cy="113" r="4" fill="#fff" stroke="none"/>
+  <path d="M355 140Q376 130 388 151Q391 170 371 174Q351 169 355 140Z" fill="#8f263b" stroke="#242124" stroke-width="6"/>
+  <path d="M287 178Q308 193 332 185" fill="none" stroke="#242124" stroke-width="7" stroke-linecap="round"/>
+  <path d="M286 190L267 208L245 216" fill="none" stroke="#242124" stroke-width="9" stroke-linecap="round"/>
+  <path d="M244 216L270 222L292 210" fill="none" stroke="#242124" stroke-width="8" stroke-linecap="round"/>
+  <path d="M255 282L280 284L273 304L245 306" fill="#ffdc37" stroke="#242124" stroke-width="8"/>
+  <path d="M260 304L250 319" stroke="#242124" stroke-width="9" stroke-linecap="round"/>
+  <path d="M250 319L286 319" stroke="#242124" stroke-width="10" stroke-linecap="round"/>
+  <path d="M300 321L322 321" stroke="#242124" stroke-width="10" stroke-linecap="round"/>
+  <path d="M275 203Q302 198 318 212" fill="none" stroke="#facc15" stroke-width="7"/>
+</svg>
