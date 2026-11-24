@@ -5,7 +5,7 @@ export function emailConfigured(): boolean {
   return !!(process.env.BREVO_API_KEY && process.env.ADMIN_EMAIL && process.env.BREVO_SENDER_EMAIL);
 }
 
-export async function sendEmailOtp(code: string) {
+export async function sendEmailOtp(code: string, recipient: string) {
   if (!emailConfigured()) return { ok: false as const, error: 'Email is not configured' };
   try {
     const r = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -17,7 +17,7 @@ export async function sendEmailOtp(code: string) {
       },
       body: JSON.stringify({
         sender: { name: process.env.BREVO_SENDER_NAME || 'Yummy Cakes', email: process.env.BREVO_SENDER_EMAIL },
-        to: [{ email: process.env.ADMIN_EMAIL }],
+        to: [{ email: recipient }],
         subject: 'Your Yummy Cakes admin login code',
         textContent: `Your admin login code is ${code}\n\nIt is valid for 5 minutes. If you did not request it, ignore this email.`,
         htmlContent:
