@@ -516,12 +516,7 @@ const ActionKamenCustomStudio = ({
                     key={photo.title}
                     className="group relative rounded-2xl overflow-hidden border-2 border-[#451A03] aspect-square bg-[#FEF3C7]"
                   >
-                    <img
-                      src={photo.image}
-                      alt={photo.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
+                    <CakeImage src={photo.image} alt={photo.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
                     <div className="absolute inset-x-0 bottom-0 bg-[#451A03]/85 text-[#FFFBEB] p-1.5 text-[10px] font-bold leading-tight">
                       {photo.tag}
                     </div>
@@ -554,11 +549,7 @@ const ActionKamenCustomStudio = ({
                           : 'bg-[#FFFBEB]/60 border-[#FDE68A] hover:border-[#451A03]'
                       }`}
                     >
-                      <img
-                        src={sponge.photo}
-                        alt={sponge.name}
-                        className="w-12 h-12 rounded-xl object-cover border border-[#451A03] shrink-0"
-                      />
+                      <CakeImage src={sponge.photo} alt={sponge.name} className="w-12 h-12 rounded-xl object-cover border border-[#451A03] shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="font-display font-bold text-sm text-[#451A03] truncate">
                           {sponge.name}
@@ -733,6 +724,49 @@ async function sendOrderConfirmation(payload: Record<string, unknown>): Promise<
   } catch {
     return false;
   }
+}
+
+function CakeImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  // Drawn cake shown whenever the photo is missing, blocked or fails to load
+  if (failed || !src) {
+    return (
+      <div
+        role="img"
+        aria-label={alt}
+        className={`${className ?? ''} flex items-center justify-center bg-gradient-to-br from-[#FEF3C7] via-[#FDE68A] to-[#FACC15]/60`}
+      >
+        <svg viewBox="0 0 120 120" className="w-1/2 h-1/2 max-w-[140px] max-h-[140px]" aria-hidden="true">
+          <ellipse cx="60" cy="104" rx="42" ry="7" fill="#451A03" opacity="0.15" />
+          <rect x="22" y="62" width="76" height="40" rx="8" fill="#92400E" stroke="#451A03" strokeWidth="3" />
+          <rect x="30" y="38" width="60" height="30" rx="8" fill="#FB7185" stroke="#451A03" strokeWidth="3" />
+          <path d="M22 70 q9 12 19 0 q9 12 19 0 q9 12 19 0 q9 12 19 0" fill="#FFFBEB" stroke="#451A03" strokeWidth="3" strokeLinejoin="round" />
+          <path d="M30 46 q7 10 15 0 q7 10 15 0 q7 10 15 0 q7 10 15 0" fill="#FFFBEB" stroke="#451A03" strokeWidth="3" strokeLinejoin="round" />
+          <rect x="58" y="18" width="4" height="18" rx="2" fill="#38BDF8" stroke="#451A03" strokeWidth="2" />
+          <path d="M60 6 q6 7 0 12 q-6 -5 0 -12z" fill="#FACC15" stroke="#451A03" strokeWidth="2" />
+        </svg>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onLoad={(e) => {
+        // Some hosts return a tiny/blank image instead of an error
+        if (e.currentTarget.naturalWidth < 20) setFailed(true);
+        else setLoaded(true);
+      }}
+      onError={() => setFailed(true)}
+      className={className}
+      data-loaded={loaded ? 'true' : 'false'}
+    />
+  );
 }
 
 function normalizeIndianWhatsAppNumber(rawPhone: string): string {
@@ -1167,16 +1201,7 @@ For updates: +91 63803 94239
               >
                 <div>
                   <div className="relative aspect-[4/3] overflow-hidden bg-[#FEF3C7]">
-                    <img
-                      src={cake.image}
-                      alt={cake.name}
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&q=80&w=700';
-                      }}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
+                    <CakeImage src={cake.image} alt={cake.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     <span className={`absolute top-3 left-3 ${cake.badgeBg} border-2 border-[#451A03] px-3 py-1 rounded-full font-display font-bold text-xs shadow-xs`}>
                       {cake.badge}
                     </span>
@@ -1314,7 +1339,7 @@ For updates: +91 63803 94239
                     <AnimatePresence initial={false}>
                       {cartItems.map((item) => (
                         <motion.div layout key={item.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 40 }} className="bg-white border-2 border-[#FDE68A] rounded-2xl p-3.5 flex items-center gap-3 shadow-xs">
-                          <img src={item.image} alt={item.name} className="w-16 h-16 rounded-xl object-cover border border-[#FDE68A] shrink-0" />
+                          <CakeImage src={item.image} alt={item.name} className="w-16 h-16 rounded-xl object-cover border border-[#FDE68A] shrink-0" />
                           <div className="flex-1 min-w-0">
                             <h4 className="font-display font-bold text-sm text-[#451A03] truncate">{item.name}</h4>
                             <p className="text-[11px] font-semibold text-[#78350F]">{item.weight} • 100% Eggless</p>
