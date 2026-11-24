@@ -10,8 +10,34 @@ const ORDER_TTL = 60 * 60 * 24 * 90; // keep orders for 90 days
 const str = (v: unknown, max: number) => String(v ?? '').replace(/[\u0000-\u001f]+/g, ' ').trim().slice(0, max);
 
 export default async function handler(req: any, res: any) {
+  if (req.method === 'GET') {
+    try {
+      const id = String(req.query?.id || '').trim();
+      const phone = normalizePhone(req.query?.phone);
+      if (!/^YCS-\d{4,8}$/.test(id) || !phone) {
+        return res.status(400).json({ ok: false, error: 'Enter a valid order ID and the phone number used at checkout' });
+      }
+      if ((await rateLimited(`customer-order-ip:${clientIp(req)}`, 30, 600)) ||
+          (await rateLimited(`customer-order-phone:${phone}`, 20, 600))) {
+        return res.status(429).json({ ok: false, error: 'Too many lookup attempts. Please try again later.' });
+      }
+      const raw = await redis(['GET', `order:${id}`]);
+      if (!raw) return res.status(404).json({ ok: false, error: 'Order not found. Check the order ID and try again.' });
+      const order = JSON.parse(raw);
+      if (order.customerPhone !== phone) return res.status(404).json({ ok: false, error: 'Order not found. Check the order ID and phone number.' });
+      return res.status(200).json({ ok: true, order: {
+        id: order.id, customerName: order.customerName, items: order.items, total: order.total,
+        mode: order.mode, deliveryTime: order.deliveryTime, status: order.status,
+        createdAt: order.createdAt, updatedAt: order.updatedAt, history: order.history || []
+      }});
+    } catch (err) {
+      console.error('customer order lookup error', err);
+      return res.status(500).json({ ok: false, error: 'Could not load this order right now. Please try again.' });
+    }
+  }
+
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+    res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
   }
   if (!redisConfigured()) return res.status(503).json({ ok: false, error: 'Order system is not configured' });
@@ -65,7 +91,11 @@ export default async function handler(req: any, res: any) {
       else id = '';
     }
     if (!saved) return res.status(500).json({ ok: false, error: 'Could not save order' });
-    await redis(['ZADD', 'orders:index', Date.now(), id]);
+    const indexed = await redis(['ZADD', 'orders:index', Date.now(), id]);
+    if (Number(indexed) < 1) {
+      await redis(['DEL', `order:${id}`]).catch(() => {});
+      return res.status(503).json({ ok: false, error: 'Order could not be added to the shop order list. Please try again.' });
+    }
 
     const wa = await sendOrderConfirmation({ id, ...base });
     if (wa.ok) {
