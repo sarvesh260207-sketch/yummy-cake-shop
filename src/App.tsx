@@ -712,17 +712,19 @@ const CAKES_DATA = [
   { id: 8, name: 'Honey Butterscotch Jar Cake Trio', mood: 'misae', price: 540, weight: '3 Jars', badge: 'Cozy Pack', badgeBg: 'bg-[#FEF3C7] text-[#451A03]', image: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&q=85&w=700', description: 'Three layered glass jars of salted caramel butterscotch, golden honey sponge & praline crunch.' },
 ];
 
-async function sendOrderConfirmation(payload: Record<string, unknown>): Promise<boolean> {
+async function submitOrder(
+  payload: Record<string, unknown>
+): Promise<{ ok: boolean; orderId?: string; whatsappSent?: boolean }> {
   try {
-    const r = await fetch('/api/send-whatsapp', {
+    const r = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     const d = await r.json().catch(() => ({}));
-    return r.ok && d.ok === true;
+    return r.ok && d.ok === true ? { ok: true, orderId: d.orderId, whatsappSent: d.whatsappSent } : { ok: false };
   } catch {
-    return false;
+    return { ok: false };
   }
 }
 
@@ -970,7 +972,7 @@ export default function App() {
       return;
     }
 
-    const orderId = 'YCS-' + Math.floor(1000 + Math.random() * 9000);
+    const orderId = 'YCS-' + Math.floor(100000 + Math.random() * 900000);
     const now = new Date();
     const bookingTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     const deliveryTime = new Date(now.getTime() + 45 * 60000).toLocaleTimeString('en-IN', {
@@ -1020,8 +1022,8 @@ For updates: +91 63803 94239
 
     setToastText(`Booking #${orderId} Confirmed! 🎂`);
 
-    // Automatically text the customer their confirmation on WhatsApp
-    void sendOrderConfirmation({
+    // Save the order for the admin dashboard and text the customer on WhatsApp
+    void submitOrder({
       orderId,
       customerName,
       customerPhone,
@@ -1030,13 +1032,23 @@ For updates: +91 63803 94239
       deliveryTime,
       total: grandTotal,
       items: cartItems.map((i) => ({ name: i.name, weight: i.weight, qty: i.qty, price: i.price })),
-    }).then((ok) =>
+    }).then((res) => {
+      if (!res.ok) {
+        setToastText('Booking confirmed! (Could not reach the shop system — please use the Send button below.)');
+        return;
+      }
+      if (res.orderId && res.orderId !== orderId) {
+        const newId = res.orderId;
+        setBookingSummary((prev) =>
+          prev ? { ...prev, orderId: newId, cleanMessage: prev.cleanMessage.replace(`#${orderId}`, `#${newId}`) } : prev
+        );
+      }
       setToastText(
-        ok
-          ? `WhatsApp confirmation sent to ${customerPhone} ✅`
-          : 'Booking confirmed! (Could not auto-send WhatsApp — use the Send button below.)'
-      )
-    );
+        res.whatsappSent
+          ? `Order placed! WhatsApp confirmation sent to ${customerPhone} ✅`
+          : 'Order placed! (WhatsApp text could not be sent — use the Send button below.)'
+      );
+    });
   };
 
   const handleCopyBookingText = () => {
