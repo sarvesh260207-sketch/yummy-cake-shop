@@ -58,9 +58,9 @@ function beep() {
 }
 
 function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [step, setStep] = useState<'phone' | 'code'>('phone');
+  const [step, setStep] = useState<'email' | 'code'>('email');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [cooldown, setCooldown] = useState(0);
@@ -74,12 +74,12 @@ function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
   const sendCode = async () => {
     setBusy(true);
     setMsg('');
-    const { data } = await api('/api/admin/otp-request', { method: 'POST', body: JSON.stringify({ phone }) });
+    const { data } = await api('/api/admin/otp-request', { method: 'POST', body: JSON.stringify({ email }) });
     setBusy(false);
     if (data.ok) {
       setStep('code');
       setCooldown(30);
-      setMsg('If this number is authorised, a code was sent. Check your email (or SMS). It can take up to a minute.');
+      setMsg('If this number is authorised, a code was sent. Check the email address you entered. It can take up to a minute.');
     } else {
       setMsg(data.error || 'Something went wrong');
     }
@@ -88,7 +88,7 @@ function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
   const verify = async () => {
     setBusy(true);
     setMsg('');
-    const { data } = await api('/api/admin/otp-verify', { method: 'POST', body: JSON.stringify({ phone, code }) });
+    const { data } = await api('/api/admin/otp-verify', { method: 'POST', body: JSON.stringify({ email, code }) });
     setBusy(false);
     if (data.ok) onLoggedIn();
     else setMsg(data.error || 'Invalid code');
@@ -99,24 +99,22 @@ function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
       <div className="w-full max-w-sm bg-white rounded-3xl border-2 border-[#451A03] p-6 shadow-lg">
         <div className="text-4xl mb-1">🎂</div>
         <h1 className="text-2xl font-extrabold text-[#451A03]">Yummy Cakes Admin</h1>
-        <p className="text-sm text-[#78350F] mb-5">Enter your admin mobile number. We'll send a one-time code.</p>
+        <p className="text-sm text-[#78350F] mb-5">Enter your admin email address. We'll send a one-time code.</p>
 
-        {step === 'phone' ? (
+        {step === 'email' ? (
           <>
-            <label className="text-xs font-bold text-[#78350F]">Mobile number</label>
-            <div className="flex gap-2 mt-1">
-              <span className="px-3 py-2 rounded-xl bg-[#FEF3C7] border-2 border-[#451A03] font-bold">+91</span>
-              <input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/[^\d ]/g, ''))}
-                inputMode="numeric"
-                placeholder="98765 43210"
-                className="flex-1 min-w-0 px-3 py-2 rounded-xl border-2 border-[#451A03] outline-none"
-              />
-            </div>
+            <label className="text-xs font-bold text-[#78350F]">Email address</label>
+            <input
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value.trim())}
+              placeholder="admin@example.com"
+              className="mt-1 w-full px-3 py-3 rounded-xl border-2 border-[#451A03] outline-none"
+            />
             <button
               onClick={sendCode}
-              disabled={busy || phone.replace(/\D/g, '').length < 10}
+              disabled={busy || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)}
               className="mt-4 w-full py-3 rounded-2xl bg-[#FACC15] border-2 border-[#451A03] font-extrabold text-[#451A03] disabled:opacity-50 cursor-pointer"
             >
               {busy ? 'Sending…' : 'Send code'}
@@ -141,8 +139,8 @@ function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
               {busy ? 'Checking…' : 'Verify & sign in'}
             </button>
             <div className="mt-3 flex justify-between text-sm font-semibold text-[#78350F]">
-              <button onClick={() => { setStep('phone'); setCode(''); setMsg(''); }} className="underline cursor-pointer">
-                Change number
+              <button onClick={() => { setStep('email'); setCode(''); setMsg(''); }} className="underline cursor-pointer">
+                Change email
               </button>
               <button onClick={sendCode} disabled={cooldown > 0 || busy} className="underline disabled:opacity-50 cursor-pointer">
                 {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
