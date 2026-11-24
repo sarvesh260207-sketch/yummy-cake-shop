@@ -199,7 +199,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   const active = orders.filter((o) => !DONE.includes(o.status));
   const done = orders.filter((o) => DONE.includes(o.status));
   const newCount = active.filter((o) => o.status === 'Received').length;
-  const filteredShown = shown.filter((o) => {
+  const filteredShown = (tab === 'active' ? active : done).filter((o) => {
     const q = search.trim().toLowerCase();
     return !q || [o.id, o.customerName, o.customerPhone, o.status, ...o.items.map((i) => i.name)].some((v) => String(v).toLowerCase().includes(q));
   });
