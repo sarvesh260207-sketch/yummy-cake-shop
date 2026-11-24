@@ -160,6 +160,10 @@ const fmtTime = (iso: string) =>
 function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [tab, setTab] = useState<'active' | 'done'>('active');
+  const [view, setView] = useState<'orders' | 'products' | 'assistant'>('orders');
+  const [search, setSearch] = useState('');
+  const [question, setQuestion] = useState('');
+  const [answers, setAnswers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updating, setUpdating] = useState<string | null>(null);
@@ -195,6 +199,53 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   const active = orders.filter((o) => !DONE.includes(o.status));
   const done = orders.filter((o) => DONE.includes(o.status));
   const newCount = active.filter((o) => o.status === 'Received').length;
+  const filteredShown = shown.filter((o) => {
+    const q = search.trim().toLowerCase();
+    return !q || [o.id, o.customerName, o.customerPhone, o.status, ...o.items.map((i) => i.name)].some((v) => String(v).toLowerCase().includes(q));
+  });
+  const productRows = orders.flatMap((o) => o.items.map((i) => ({ ...i, orderId: o.id, status: o.status })));
+  const productSummary = Array.from(productRows.reduce((map, item) => {
+    const key = item.name.trim().toLowerCase();
+    const row = map.get(key) || { name: item.name, quantity: 0, orderCount: new Set<string>(), revenue: 0 };
+    row.quantity += Number(item.qty) || 0;
+    row.orderCount.add(item.orderId);
+    row.revenue += (Number(item.price) || 0) * (Number(item.qty) || 0);
+    map.set(key, row);
+    return map;
+  }, new Map<string, { name: string; quantity: number; orderCount: Set<string>; revenue: number }>()).values())
+    .map((p) => ({ ...p, orderCount: p.orderCount.size }))
+    .sort((a, b) => b.quantity - a.quantity);
+  const completedOrders = orders.filter((o) => o.status === 'Completed');
+  const paidRevenue = completedOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const totalOrderValue = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const money = (n: number) => '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  const answerQuestion = () => {
+    const q = question.trim().toLowerCase();
+    if (!q) return;
+    let answer = '';
+    if (/revenue|sales|earning|income/.test(q)) {
+      answer = `From the orders currently stored in the website database: completed-order revenue is ${money(paidRevenue)} across ${completedOrders.length} completed orders. Non-cancelled order value (including orders not yet completed) is ${money(totalOrderValue)}. This is order value, not verified profit.`;
+    } else if (/pending|active|open|not completed/.test(q)) {
+      answer = `${active.length} active orders are currently stored. ${newCount} are newly received. Status counts: ${STATUSES.filter((s) => active.some((o) => o.status === s)).map((s) => s + ': ' + active.filter((o) => o.status === s).length).join(', ') || 'No active status records'}.`;
+    } else if (/best|popular|selling|top cake|cake.*order/.test(q)) {
+      answer = productSummary.length ? `Most ordered cake in the stored website orders: ${productSummary[0].name} — ${productSummary[0].quantity} units across ${productSummary[0].orderCount} orders, with recorded item value ${money(productSummary[0].revenue)}.` : 'There are no cake items in the website order records yet.';
+    } else if (/customer|repeat|buyer/.test(q)) {
+      const customers = new Map<string, number>();
+      orders.forEach((o) => { const k = String(o.customerPhone || o.customerName).toLowerCase(); customers.set(k, (customers.get(k) || 0) + 1); });
+      const repeat = [...customers.values()].filter((n) => n > 1).length;
+      answer = `${customers.size} distinct customer identities and ${repeat} repeat customers appear in the currently stored website orders. Customer matching uses phone number where available.`;
+    } else if (/cancel/.test(q)) {
+      const cancelled = orders.filter((o) => o.status === 'Cancelled');
+      answer = `${cancelled.length} of ${orders.length} stored orders are cancelled. Recorded cancelled order value: ${money(cancelled.reduce((s, o) => s + (Number(o.total) || 0), 0))}.`;
+    } else if (/average|aov|order value/.test(q)) {
+      const valid = orders.filter((o) => o.status !== 'Cancelled');
+      answer = valid.length ? `Average non-cancelled order value: ${money(valid.reduce((s, o) => s + (Number(o.total) || 0), 0) / valid.length)} across ${valid.length} orders.` : 'No non-cancelled website orders are stored yet.';
+    } else {
+      answer = 'I can answer from real website order records only. Try asking about revenue, active/pending orders, best-selling cake, repeat customers, cancellations, or average order value. I do not invent data or estimate ingredient costs/profit.';
+    }
+    setAnswers((prev) => [...prev, 'You: ' + question.trim(), 'Assistant: ' + answer]);
+    setQuestion('');
+  };
 
   useEffect(() => {
     document.title = newCount ? `(${newCount}) New orders · Admin` : 'Orders · Admin';
@@ -243,15 +294,16 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
         </div>
 
         {error && <div className="mb-4 p-3 rounded-xl bg-[#FEE2E2] border border-[#B91C1C] text-sm font-semibold">{error}</div>}
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search order ID, customer, phone or cake…" className="w-full mb-4 rounded-xl border-2 border-[#451A03] bg-white px-4 py-3 outline-none" />
         {loading && <p className="text-center py-10 font-semibold">Loading orders…</p>}
-        {!loading && shown.length === 0 && (
+        {!loading && filteredShown.length === 0 && (
           <p className="text-center py-10 font-semibold text-[#78350F]">
             {tab === 'active' ? 'No active orders right now 🎉' : 'No completed orders yet'}
           </p>
         )}
 
         <div className="space-y-4">
-          {shown.map((o) => (
+          {filteredShown.map((o) => (
             <article key={o.id} className="bg-white rounded-2xl border-2 border-[#451A03] p-4 shadow-sm">
               <div className="flex items-start justify-between gap-2">
                 <div>
