@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { redis } from './redis.js';
+import { redis, redisConfigured } from './redis.js';
 
 export const COOKIE_NAME = 'ycs_admin';
 const SESSION_HOURS = 12;
@@ -72,4 +72,13 @@ export function parseBody(req: any): any {
   } catch {
     return {};
   }
+}
+
+// Names of required settings that are missing (never values)
+export function missingConfig(): string[] {
+  const m: string[] = [];
+  if (!redisConfigured()) m.push('Redis database (Upstash) variables');
+  if (!adminPhone()) m.push('ADMIN_PHONE (valid 10-digit mobile)');
+  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) m.push('SESSION_SECRET (32+ characters)');
+  return m;
 }

@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { adminPhone, clientIp, hashOtp, normalizePhone, parseBody, rateLimited } from '../_lib/auth.js';
+import { missingConfig, adminPhone, clientIp, hashOtp, normalizePhone, parseBody, rateLimited } from '../_lib/auth.js';
 import { redis, redisConfigured } from '../_lib/redis.js';
 import { emailConfigured, sendEmailOtp } from '../_lib/email.js';
 import { sendSmsOtp, smsConfigured } from '../_lib/sms.js';
@@ -10,8 +10,8 @@ export default async function handler(req: any, res: any) {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
   }
-  if (!redisConfigured() || !adminPhone() || !process.env.SESSION_SECRET) {
-    return res.status(503).json({ ok: false, error: 'Admin login is not configured on the server' });
+  if (missingConfig().length) {
+    return res.status(503).json({ ok: false, error: `Admin login is not configured. Missing: ${missingConfig().join(', ')}` });
   }
   try {
     const phone = normalizePhone(parseBody(req).phone);

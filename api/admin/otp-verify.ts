@@ -1,4 +1,4 @@
-import { adminPhone, clientIp, hashOtp, normalizePhone, parseBody, rateLimited, safeEqual, sessionCookie } from '../_lib/auth.js';
+import { missingConfig, adminPhone, clientIp, hashOtp, normalizePhone, parseBody, rateLimited, safeEqual, sessionCookie } from '../_lib/auth.js';
 import { redis, redisConfigured } from '../_lib/redis.js';
 
 export default async function handler(req: any, res: any) {
@@ -6,8 +6,8 @@ export default async function handler(req: any, res: any) {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
   }
-  if (!redisConfigured() || !adminPhone() || !process.env.SESSION_SECRET) {
-    return res.status(503).json({ ok: false, error: 'Admin login is not configured on the server' });
+  if (missingConfig().length) {
+    return res.status(503).json({ ok: false, error: `Admin login is not configured. Missing: ${missingConfig().join(', ')}` });
   }
   try {
     const body = parseBody(req);
