@@ -716,7 +716,7 @@ const CAKES_DATA = [
 
 async function submitOrder(
   payload: Record<string, unknown>
-): Promise<{ ok: boolean; orderId?: string; whatsappSent?: boolean }> {
+): Promise<{ ok: boolean; orderId?: string; whatsappSent?: boolean; error?: string }> {
   try {
     const r = await fetch('/api/orders', {
       method: 'POST',
