@@ -1,5 +1,5 @@
 import { missingConfig, adminPhone, clientIp, hashOtp, normalizePhone, parseBody, rateLimited, safeEqual, sessionCookie } from '../_lib/auth.js';
-import { redis, redisConfigured } from '../_lib/redis.js';
+import { redis } from '../_lib/redis.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {

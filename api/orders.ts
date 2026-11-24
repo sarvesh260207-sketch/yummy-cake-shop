@@ -1,11 +1,12 @@
 // Public endpoint: the website posts a new order here. We store it and
 // send the customer their WhatsApp confirmation.
 import { clientIp, normalizePhone, parseBody, rateLimited } from './_lib/auth.js';
-import { redis, redisConfigured, redisPipeline } from './_lib/redis.js';
+import { redis, redisConfigured } from './_lib/redis.js';
 import { sendOrderConfirmation, type OrderItem } from './_lib/whatsapp.js';
 
 const ORDER_TTL = 60 * 60 * 24 * 90; // keep orders for 90 days
 
+// eslint-disable-next-line no-control-regex
 const str = (v: unknown, max: number) => String(v ?? '').replace(/[\u0000-\u001f]+/g, ' ').trim().slice(0, max);
 
 export default async function handler(req: any, res: any) {

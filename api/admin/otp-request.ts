@@ -1,6 +1,6 @@
 import { randomInt } from 'node:crypto';
 import { missingConfig, adminPhone, clientIp, hashOtp, normalizePhone, parseBody, rateLimited } from '../_lib/auth.js';
-import { redis, redisConfigured } from '../_lib/redis.js';
+import { redis } from '../_lib/redis.js';
 import { emailConfigured, sendEmailOtp } from '../_lib/email.js';
 import { sendSmsOtp, smsConfigured } from '../_lib/sms.js';
 import { sendOtp } from '../_lib/whatsapp.js';

@@ -1,5 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { emailConfigured } from './email.js';
 import { redis, redisConfigured } from './redis.js';
+import { smsConfigured } from './sms.js';
+import { whatsappConfigured } from './whatsapp.js';
 
 export const COOKIE_NAME = 'ycs_admin';
 const SESSION_HOURS = 12;
@@ -80,5 +83,9 @@ export function missingConfig(): string[] {
   if (!redisConfigured()) m.push('Redis database (Upstash) variables');
   if (!adminPhone()) m.push('ADMIN_PHONE (valid 10-digit mobile)');
   if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) m.push('SESSION_SECRET (32+ characters)');
+  if (!emailConfigured() && !smsConfigured() && !whatsappConfigured()) {
+    const miss = ['BREVO_API_KEY', 'BREVO_SENDER_EMAIL', 'ADMIN_EMAIL'].filter((k) => !process.env[k]);
+    m.push(`login-code delivery (${miss.join(', ')})`);
+  }
   return m;
 }
