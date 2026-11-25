@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 type OrderItem = { name: string; weight?: string; qty: number; price: number };
 type Order = {
@@ -62,7 +62,7 @@ function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
 
-  const signIn = async (event: React.FormEvent) => {
+  const signIn = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
     setMsg('');
