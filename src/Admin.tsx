@@ -57,61 +57,6 @@ function beep() {
   }
 }
 
-function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
-  const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState('');
-
-  const signIn = async (event: FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    setMsg('');
-    try {
-      const { data } = await api('/api/admin/password-login', {
-        method: 'POST',
-        body: JSON.stringify({ password }),
-      });
-      if (data.ok) {
-        onLoggedIn();
-      } else {
-        setMsg(data.error || 'Unable to sign in. Check your password.');
-      }
-    } catch {
-      setMsg('Could not connect. Please try again.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FFFBEB] p-4">
-      <form onSubmit={signIn} className="w-full max-w-sm bg-white rounded-3xl border-2 border-[#451A03] p-6 shadow-lg">
-        <div className="text-4xl mb-1">🎂</div>
-        <h1 className="text-2xl font-extrabold text-[#451A03]">Yummy Cakes Admin</h1>
-        <p className="text-sm text-[#78350F] mb-5">Enter your admin password to continue.</p>
-        <label htmlFor="admin-password" className="text-xs font-bold text-[#78350F]">Admin password</label>
-        <input
-          id="admin-password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter admin password"
-          className="mt-1 w-full px-3 py-3 rounded-xl border-2 border-[#451A03] outline-none"
-          required
-        />
-        <button
-          type="submit"
-          disabled={busy || !password}
-          className="mt-4 w-full py-3 rounded-2xl bg-[#FACC15] border-2 border-[#451A03] font-extrabold text-[#451A03] disabled:opacity-50 cursor-pointer"
-        >
-          {busy ? 'Signing in…' : 'Sign in'}
-        </button>
-        {msg && <p role="alert" className="mt-4 text-sm font-semibold text-[#92400E]">{msg}</p>}
-      </form>
-    </div>
-  );
-}
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -221,11 +166,6 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
     else setError(data.error || 'Could not update status');
   };
 
-  const logout = async () => {
-    await api('/api/admin/session', { method: 'DELETE' });
-    onLoggedOut();
-  };
-
 
   return (
     <div className="min-h-screen bg-[#FFFBEB] text-[#451A03]">
@@ -234,7 +174,6 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
         <div className="flex items-center gap-3 text-xs">
           {updatedAt && <span className="hidden sm:inline opacity-70">Updated {updatedAt.toLocaleTimeString('en-IN')}</span>}
           <button onClick={() => void load()} className="px-3 py-1 rounded-full bg-[#FACC15] text-[#451A03] font-bold cursor-pointer">Refresh</button>
-          <button onClick={logout} className="px-3 py-1 rounded-full border border-[#FFFBEB]/50 font-bold cursor-pointer">Sign out</button>
         </div>
       </header>
 
@@ -339,23 +278,14 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
 }
 
 export default function Admin() {
-  const [state, setState] = useState<'checking' | 'out' | 'in'>('checking');
-
   useEffect(() => {
     const meta = document.createElement('meta');
     meta.name = 'robots';
     meta.content = 'noindex,nofollow';
     document.head.appendChild(meta);
     document.title = 'Admin · Yummy Cakes';
-    api('/api/admin/session').then(({ data }) => setState(data.ok ? 'in' : 'out'));
-    return () => {
-      meta.remove();
-    };
+    return () => meta.remove();
   }, []);
 
-  const loggedOut = useCallback(() => setState('out'), []);
-
-  if (state === 'checking') return <div className="min-h-screen flex items-center justify-center bg-[#FFFBEB] font-semibold">Loading…</div>;
-  if (state === 'out') return <Login onLoggedIn={() => setState('in')} />;
-  return <Dashboard onLoggedOut={loggedOut} />;
+  return <Dashboard onLoggedOut={() => {}} />;
 }
