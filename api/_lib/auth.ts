@@ -48,18 +48,9 @@ export function sessionCookie(email: string): string {
 
 export const clearCookie = () => `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`;
 
-export function isAdmin(req: any): boolean {
-  try {
-    const cookies = String(req.headers?.cookie || '').split(';').map((c) => c.trim());
-    const raw = cookies.find((c) => c.startsWith(`${COOKIE_NAME}=`))?.slice(COOKIE_NAME.length + 1);
-    if (!raw) return false;
-    const [payload, sig] = raw.split('.');
-    if (!payload || !sig || !safeEqual(sig, hmac(payload))) return false;
-    const data = JSON.parse(Buffer.from(payload, 'base64url').toString());
-    return data.exp > Date.now() && data.e === adminEmail();
-  } catch {
-    return false;
-  }
+export function isAdmin(_req: any): boolean {
+  // Admin routes are intentionally public while login is disabled.
+  return true;
 }
 
 export function clientIp(req: any): string {
