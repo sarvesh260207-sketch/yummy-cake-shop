@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type OrderItem = { name: string; weight?: string; qty: number; price: number };
 type Order = {
