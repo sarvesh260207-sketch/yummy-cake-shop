@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Admin from './Admin';
 
 interface CartItem {
   id: number | string;
@@ -1085,6 +1086,8 @@ export default function App() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  if (isAdminRoute) return <Admin />;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFFBEB] via-[#FEF3C7]/70 to-[#FFFBEB] text-[#451A03] selection:bg-[#FACC15] selection:text-[#451A03]">
       <FontAndStyleInjector />
@@ -1101,7 +1104,7 @@ export default function App() {
 
 
       <AnimatePresence>
-        {showIntro && <IntroVideo onFinish={() => setShowIntro(false)} />}
+        {showIntro && !isSignInRoute && <IntroVideo onFinish={() => setShowIntro(false)} />}
       </AnimatePresence>
 
       <div className="bg-[#451A03] text-[#FFFBEB] px-4 py-2 text-center text-xs sm:text-sm font-semibold flex flex-wrap items-center justify-center gap-2">
