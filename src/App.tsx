@@ -696,7 +696,7 @@ const ActionKamenCustomStudio = ({
 // CATALOG DATA (WITH ACTION KAMEN PHOTOS)
 // ============================================================================
 const MOOD_CATEGORIES = [
-  { id: 'all', label: 'All SV Bakery treats', tagline: 'Freshly baked in Chromepet with pure love', Icon: AllCakesIcon },
+  { id: 'all', label: 'All Yummy Cakes', tagline: 'Freshly baked in Chromepet with pure love', Icon: AllCakesIcon },
   { id: 'chocobi', label: 'Chocobi Cravings', tagline: 'Rich Belgian chocolate, truffle & hazelnut crunch', Icon: ChocobiBoxIcon },
   { id: 'action-kamen', label: 'Action Kamen Specials', tagline: 'Heroic theme cakes & rainbow celebration tiers', Icon: ActionKamenMaskIcon },
   { id: 'shiro', label: 'Shiro’s Fluffy Picks', tagline: 'Cloud-soft vanilla, white forest & fresh cream', Icon: ShiroFaceIcon },
@@ -1022,8 +1022,8 @@ export default function App() {
     const result=await submitOrder({orderId:requestedId,customerName,customerPhone,mode,address,deliveryTime,total:grandTotal,items:cartItems.map(i=>({name:i.name,weight:i.weight,qty:i.qty,price:i.price}))});
     setOrderSubmitting(false); if(!result.ok||!result.orderId){setToastText(result.error||'Order was not placed. Please try again.');return;}
     const finalId=result.orderId; const map='https://maps.google.com/?q=Chrompet,+Chennai,+Tamil+Nadu+600044';
-    const locationLine=mode==='Pickup'?`Pickup Store: SV Bakery, GST Road, Chromepet\nMap: ${map}`:`Delivery Address: ${address}`;
-    const cleanMessage=`🎂 *SV BAKERY (CHROMEPET) - ORDER RECEIVED*\nHello *${customerName}*! We have received your order.\n\n*Booking ID:* #${finalId}\n*Booked At:* ${bookingTime}\n*Est. ${mode} Time:* ${deliveryTime}\n*Mode:* ${mode}\n\n*Order Details:*\n${itemsText}\n\n*Total Payable:* ₹${grandTotal}\n${locationLine}\n\nFor updates: +91 63803 94239`;
+    const locationLine=mode==='Pickup'?`Pickup Store: Yummy Cake Shop, GST Road, Chromepet\nMap: ${map}`:`Delivery Address: ${address}`;
+    const cleanMessage=`🎂 *YUMMY CAKE SHOP (CHROMEPET) - ORDER RECEIVED*\nHello *${customerName}*! We have received your order.\n\n*Booking ID:* #${finalId}\n*Booked At:* ${bookingTime}\n*Est. ${mode} Time:* ${deliveryTime}\n*Mode:* ${mode}\n\n*Order Details:*\n${itemsText}\n\n*Total Payable:* ₹${grandTotal}\n${locationLine}\n\nFor updates: +91 63803 94239`;
     setBookingSummary({orderId:finalId,bookingTime,deliveryTime,customerName,customerPhone,mode,address,totalAmount:grandTotal,itemsText,cleanMessage});
     try{localStorage.setItem('ycs_last_order',JSON.stringify({id:finalId,phone:customerPhone}));}catch{}
     setLookupId(finalId);setLookupPhone(customerPhone);setCustomerOrder(null);setCartItems([]);
@@ -1066,7 +1066,7 @@ export default function App() {
       </AnimatePresence>
 
       <div className="bg-[#451A03] text-[#FFFBEB] px-4 py-2 text-center text-xs sm:text-sm font-semibold flex flex-wrap items-center justify-center gap-2">
-        <span className="text-[#FACC15] font-bold">★ SV Bakery • Chromepet, Chennai</span>
+        <span className="text-[#FACC15] font-bold">★ Yummy Cake Shop • Chromepet, Chennai</span>
         <span className="hidden sm:inline opacity-40">•</span>
         <span>45-Min Express Delivery • 100% Pure Eggless Options</span>
         <span className="bg-[#4ADE80] text-[#451A03] px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase">
@@ -1082,7 +1082,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="font-display font-bold text-xl sm:text-2xl text-[#451A03] leading-none">
-                SV Bakery
+                Yummy Cake Shop
               </h1>
               <p className="text-[11px] sm:text-xs font-bold text-[#78350F] mt-1">
                 Chromepet, Chennai • <span className="text-[#92400E]">“நாவின் சுவை அரும்புகள் மலரட்டும்”</span>
@@ -1112,7 +1112,7 @@ export default function App() {
                 <line x1="3" y1="6" x2="21" y2="6" />
                 <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
-              <span>SV Bakery Box</span>
+              <span>Yummy Box</span>
               <span className="bg-[#FB7185] text-white border border-[#451A03] text-xs font-extrabold min-w-[24px] h-6 px-1.5 rounded-full flex items-center justify-center">
                 {totalCount}
               </span>
@@ -1256,7 +1256,7 @@ export default function App() {
 
       <footer className="bg-[#FEF3C7] border-t-2 border-[#FDE68A] py-8 px-4 text-center space-y-1.5">
         <p className="font-display font-bold text-lg text-[#451A03]">
-          SV Bakery • GST Road, Chromepet, Chennai
+          Yummy Cake Shop • GST Road, Chromepet, Chennai
         </p>
         <p className="font-display font-bold text-sm text-[#78350F]">
           “நாவின் சுவை அரும்புகள் மலரட்டும்”
@@ -1276,13 +1276,13 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', stiffness: 360, damping: 34 }}
-              aria-label="SV Bakery Shopping Cart"
+              aria-label="Yummy Cake Shop Shopping Cart"
              className="relative z-10 w-full max-w-lg shrink-0 bg-[#FFFBEB] border-l-2 border-[#451A03] h-full flex flex-col shadow-2xl"
             >
               <div className="px-5 py-4 bg-white border-b-2 border-[#FDE68A] flex items-center justify-between">
                 <div>
                   <h2 className="font-display font-bold text-xl text-[#451A03]">
-                    Your SV Bakery Box ({totalCount})
+                    Your Yummy Box ({totalCount})
                   </h2>
                   <p className="text-xs font-semibold text-[#78350F]">
                     Chromepet 45-Min Express Dispatch
@@ -1322,7 +1322,7 @@ export default function App() {
                       Your box is currently empty. Pick a Chocobi Truffle or design your own Action Kamen cake!
                     </p>
                     <button onClick={handleBrowseFromEmptyCart} className="bg-[#FACC15] hover:bg-[#FDE047] text-[#451A03] font-display font-bold px-6 py-3.5 rounded-2xl border-2 border-[#451A03] squishy-btn text-sm cursor-pointer">
-                      Browse SV Bakery →
+                      Browse Yummy Cakes →
                     </button>
                   </div>
                 ) : (
