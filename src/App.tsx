@@ -1040,7 +1040,6 @@ export default function App() {
       try{
         const cfg=await fetch('/api/auth/google-config').then(r=>r.json());
         if(!active||!cfg.clientId){if(active)setToastText('Google sign-in is not configured yet.');return;}
-        setGoogleClientId(cfg.clientId);
         const init=()=>{
           const g=(window as any).google;
           if(!active||!g?.accounts?.id)return;
