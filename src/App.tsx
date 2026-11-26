@@ -1044,31 +1044,53 @@ export default function App() {
   const handleLookupOrder=async()=>{if(!lookupId.trim()){setLookupError('Enter order ID.');return;}setLookupLoading(true);setLookupError('');setCustomerOrder(null);const r=await fetch('/api/orders?id='+encodeURIComponent(lookupId));const d=await r.json().catch(()=>({}));setLookupLoading(false);if(!r.ok||!d.ok){setLookupError(d.error||'Order not found');return;}setCustomerOrder(d.order);};
   useEffect(()=>{void fetch('/api/auth/session').then(r=>r.json()).then(async d=>{if(d.user){setGoogleUser(d.user);const o=await fetchCustomerOrders();if(o.ok)setMyOrders(o.orders||[]);}}).catch(()=>{});},[]);
   useEffect(()=>{
+    if(!myPageOpen||googleUser)return;
     let active=true;
+    let pollId:number|undefined;
+    let timeoutId:number|undefined;
+    let initialized=false;
+    const showError=(message:string)=>{if(active)setToastText(message);};
+    const init=()=>{
+      const g=(window as any).google;
+      const el=document.getElementById('google-signin-button');
+      if(!active||initialized||!g?.accounts?.id||!el)return false;
+      initialized=true;
+      el.innerHTML='';
+      g.accounts.id.initialize({client_id:clientId,callback:async(response:any)=>{
+        try{
+          const r=await fetch('/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})});
+          const d=await r.json().catch(()=>({}));
+          if(r.ok&&d.ok){setGoogleUser(d.user);const o=await fetchCustomerOrders();if(o.ok)setMyOrders(o.orders||[]);setToastText('Signed in successfully!');}
+          else setToastText(d.error||'Google sign-in failed');
+        }catch{setToastText('Could not complete Google sign-in. Please try again.');}
+      }});
+      g.accounts.id.renderButton(el,{theme:'outline',size:'large',shape:'pill',text:'continue_with',width:260});
+      return true;
+    };
+    let clientId='';
     const setup=async()=>{
       try{
-        const cfg=await fetch('/api/auth/google-config').then(r=>r.json());
-        if(!active||!cfg.clientId){if(active)setToastText('Google sign-in is not configured yet.');return;}
-        const init=()=>{
-          const g=(window as any).google;
-          if(!active||!g?.accounts?.id)return;
-          g.accounts.id.initialize({client_id:cfg.clientId,callback:async(response:any)=>{
-            const r=await fetch('/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})});
-            const d=await r.json().catch(()=>({}));
-            if(r.ok&&d.ok){setGoogleUser(d.user);const o=await fetchCustomerOrders();if(o.ok)setMyOrders(o.orders||[]);setToastText('Signed in successfully!');}
-            else setToastText(d.error||'Google sign-in failed');
-          }});
-          const el=document.getElementById('google-signin-button');
-          if(el)g.accounts.id.renderButton(el,{theme:'outline',size:'large',shape:'pill',text:'continue_with',width:260});
-        };
-        if((window as any).google?.accounts?.id){init();return;}
+        const cfg=await fetch('/api/auth/google-config',{cache:'no-store'}).then(r=>r.json());
+        if(!active)return;
+        if(!cfg?.clientId){showError('Google sign-in configuration is missing. Please contact the shop.');return;}
+        clientId=cfg.clientId;
+        if(init())return;
         let script=document.getElementById('google-identity-script') as HTMLScriptElement|null;
-        if(!script){script=document.createElement('script');script.id='google-identity-script';script.src='https://accounts.google.com/gsi/client';script.async=true;script.defer=true;script.onload=init;document.head.appendChild(script);}
-        else script.addEventListener('load',init,{once:true});
-      }catch{if(active)setToastText('Could not load Google sign-in. Please try again.');}
+        if(!script){
+          script=document.createElement('script');
+          script.id='google-identity-script';
+          script.src='https://accounts.google.com/gsi/client';
+          script.async=true;
+          script.defer=true;
+          document.head.appendChild(script);
+        }
+        script.addEventListener('error',()=>showError('Google sign-in could not load. Check your connection or browser privacy settings.'),{once:true});
+        pollId=window.setInterval(()=>{if(init()&&pollId!==undefined){window.clearInterval(pollId);pollId=undefined;}},200);
+        timeoutId=window.setTimeout(()=>{if(!initialized)showError('Google sign-in is taking too long to load. Refresh the page and try again.');},12000);
+      }catch{showError('Could not load Google sign-in. Please refresh and try again.');}
     };
-    if(myPageOpen&&!googleUser)void setup();
-    return()=>{active=false;};
+    void setup();
+    return()=>{active=false;if(pollId!==undefined)window.clearInterval(pollId);if(timeoutId!==undefined)window.clearTimeout(timeoutId);};
   },[myPageOpen,googleUser]);
   const signOutCustomer=async()=>{await fetch('/api/auth/session',{method:'DELETE'});setGoogleUser(null);setMyOrders([]);setCustomerOrder(null);setToastText('Signed out');};
 
