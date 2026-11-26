@@ -913,6 +913,14 @@ export default function App() {
   const heroSectionRef = useRef<HTMLElement | null>(null);
   const cyclePassIndexRef = useRef(0);
   const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/admin';
+  const isSignInRoute = typeof window !== 'undefined' && window.location.pathname.replace(/\\/+$/, '') === '/signin';
+
+  useEffect(() => {
+    if (isSignInRoute) {
+      setShowIntro(false);
+      setMyPageOpen(true);
+    }
+  }, [isSignInRoute]);
 
   useEffect(() => {
     const hero = heroSectionRef.current;
