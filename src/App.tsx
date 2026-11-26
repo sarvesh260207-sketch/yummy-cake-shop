@@ -14,7 +14,7 @@ interface CartItem {
   qty: number;
 }
 
-interface CustomerOrder { id:string; customerName:string; items:{name:string;weight:string;qty:number;price:number}[]; total:number; mode:string; deliveryTime:string; status:string; createdAt:string; updatedAt:string; history:{status:string;at:string}[]; }
+interface CustomerOrder { id:string; customerName:string; customerPhone:string; items:{name:string;weight:string;qty:number;price:number}[]; total:number; mode:string; deliveryTime:string; status:string; createdAt:string; updatedAt:string; history:{status:string;at:string}[]; }\ninterface GoogleUser { sub:string; email:string; name:string; picture?:string; }
 
 interface BookingSummary {
   orderId: string;
@@ -730,7 +730,7 @@ async function submitOrder(
   }
 }
 
-async function fetchCustomerOrder(id:string, phone:string):Promise<{ok:boolean;order?:CustomerOrder;error?:string}>{ try { const q=new URLSearchParams({id,phone}); const r=await fetch('/api/orders?'+q.toString()); const d=await r.json().catch(()=>({})); return r.ok&&d.ok?{ok:true,order:d.order}:{ok:false,error:d.error||'Order not found'}; } catch { return {ok:false,error:'Could not connect to the shop'}; } }
+async function fetchCustomerOrders():Promise<{ok:boolean;orders?:CustomerOrder[];error?:string}>{ try { const r=await fetch('/api/orders'); const d=await r.json().catch(()=>({})); return r.ok&&d.ok?{ok:true,orders:d.orders}:{ok:false,error:d.error||'Could not load orders'}; } catch { return {ok:false,error:'Could not connect to the shop'}; } }
 
 function CakeImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
   const [failed, setFailed] = useState(false);
@@ -902,7 +902,7 @@ export default function App() {
   const [cartBounceKey, setCartBounceKey] = useState<number>(0);
   const [toastText, setToastText] = useState<string | null>(null);
   const [bookingSummary, setBookingSummary] = useState<BookingSummary | null>(null);
-  const [myPageOpen,setMyPageOpen]=useState(false);
+  const [myPageOpen,setMyPageOpen]=useState(false);\n  const [googleUser,setGoogleUser]=useState<GoogleUser|null>(null); const [myOrders,setMyOrders]=useState<CustomerOrder[]>([]); const [googleReady,setGoogleReady]=useState(false);
   const [lookupId,setLookupId]=useState(''); const [lookupPhone,setLookupPhone]=useState('');
   const [customerOrder,setCustomerOrder]=useState<CustomerOrder|null>(null);
   const [lookupLoading,setLookupLoading]=useState(false); const [lookupError,setLookupError]=useState(''); const [orderSubmitting,setOrderSubmitting]=useState(false);
@@ -1015,11 +1015,11 @@ export default function App() {
     const address=(document.getElementById('cust-address') as HTMLInputElement|null)?.value.trim()||'Chrompet, Chennai';
     const digits=customerPhone.replace(/\D/g,''); if(!customerName||!/^(?:[6-9]\d{9}|91[6-9]\d{9})$/.test(digits)){setToastText('Enter your name and a valid Indian mobile number.');return;}
     setOrderSubmitting(true);setBookingSummary(null);setToastText('Saving your order…');
-    const requestedId='YCS-'+Math.floor(100000+Math.random()*900000); const now=new Date();
+    const now=new Date();
     const bookingTime=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
     const deliveryTime=new Date(now.getTime()+45*60000).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
     const itemsText=cartItems.map((item,i)=>`${i+1}. ${item.name} (${item.weight}) x ${item.qty} = ₹${item.price*item.qty}`).join('\n');
-    const result=await submitOrder({orderId:requestedId,customerName,customerPhone,mode,address,deliveryTime,total:grandTotal,items:cartItems.map(i=>({name:i.name,weight:i.weight,qty:i.qty,price:i.price}))});
+    const result=await submitOrder({customerName,customerPhone,mode,address,deliveryTime,total:grandTotal,items:cartItems.map(i=>({name:i.name,weight:i.weight,qty:i.qty,price:i.price}))});
     setOrderSubmitting(false); if(!result.ok||!result.orderId){setToastText(result.error||'Order was not placed. Please try again.');return;}
     const finalId=result.orderId; const map='https://maps.google.com/?q=Chrompet,+Chennai,+Tamil+Nadu+600044';
     const locationLine=mode==='Pickup'?`Pickup Store: Yummy Cake Shop, GST Road, Chromepet\nMap: ${map}`:`Delivery Address: ${address}`;
@@ -1098,7 +1098,7 @@ export default function App() {
               <span>⚡ Custom Hero Cake</span>
             </a>
 
-            <button type="button" onClick={()=>{setMyPageOpen(true);setCustomerOrder(null);setLookupError('');}} className="bg-white text-[#451A03] border-2 border-[#451A03] px-3 py-2.5 rounded-2xl font-bold text-sm">My Page</button>
+            <button type="button" onClick={()=>{setMyPageOpen(true);setCustomerOrder(null);setLookupError('');}} className="bg-white text-[#451A03] border-2 border-[#451A03] px-3 py-2.5 rounded-2xl font-bold text-sm">{googleUser?'My Orders':'Sign in / Orders'}</button>
             <motion.button
               key={cartBounceKey}
               animate={cartBounceKey > 0 ? { scale: [1, 1.22, 0.92, 1.08, 1], rotate: [0, -6, 6, -2, 0] } : {}}
@@ -1456,7 +1456,7 @@ export default function App() {
             </form>
             {lookupError&&<p role="alert" className="mt-3 rounded-xl bg-red-50 text-red-800 p-3 text-sm">{lookupError}</p>}
             {customerOrder&&<div className="mt-4 rounded-2xl border-2 border-[#451A03] bg-white p-4 space-y-3"><div><p className="text-xs text-[#78350F]">#{customerOrder.id}</p><h3 className="font-display text-2xl font-extrabold">{customerOrder.status}</h3><p className="text-xs text-[#78350F]">Last updated {new Date(customerOrder.updatedAt).toLocaleString('en-IN')}</p></div><div className="space-y-1 text-sm">{customerOrder.items.map((i,n)=><div key={n} className="flex justify-between"><span>{i.name} × {i.qty}</span><b>₹{(i.price*i.qty).toLocaleString('en-IN')}</b></div>)}<div className="border-t pt-2 flex justify-between font-extrabold"><span>Total</span><span>₹{customerOrder.total.toLocaleString('en-IN')}</span></div></div><b className="text-sm">Status history</b><ol className="space-y-2">{customerOrder.history.map((x,n)=><li key={n} className="text-sm">🟢 {x.status}<span className="block text-xs text-[#78350F]">{new Date(x.at).toLocaleString('en-IN')}</span></li>)}</ol><button type="button" onClick={()=>void handleLookupOrder()} className="w-full border-2 border-[#451A03] rounded-xl bg-[#FEF3C7] p-2 font-bold">Refresh status</button></div>}
-            <p className="mt-4 text-xs text-[#78350F]">Order ID and the same mobile number used at checkout are required for privacy.</p>
+            <p className="mt-4 text-xs text-[#78350F]">Your Google account keeps your order history private to you.</p>
           </motion.section>
         </motion.div>}
       </AnimatePresence>
