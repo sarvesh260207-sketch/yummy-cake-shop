@@ -906,9 +906,8 @@ export default function App() {
   const [bookingSummary, setBookingSummary] = useState<BookingSummary | null>(null);
   const [myPageOpen,setMyPageOpen]=useState(false);
   const [googleUser,setGoogleUser]=useState<GoogleUser|null>(null); const [myOrders,setMyOrders]=useState<CustomerOrder[]>([]);
-  const [lookupId,setLookupId]=useState('');
   const [customerOrder,setCustomerOrder]=useState<CustomerOrder|null>(null);
-  const [lookupLoading,setLookupLoading]=useState(false); const [lookupError,setLookupError]=useState(''); const [orderSubmitting,setOrderSubmitting]=useState(false);
+  const [orderSubmitting,setOrderSubmitting]=useState(false);
 
   const menuSectionRef = useRef<HTMLElement | null>(null);
   const heroSectionRef = useRef<HTMLElement | null>(null);
@@ -1038,10 +1037,9 @@ export default function App() {
     const cleanMessage=`🎂 *YUMMY CAKE SHOP (CHROMEPET) - ORDER RECEIVED*\nHello *${customerName}*! We have received your order.\n\n*Booking ID:* #${finalId}\n*Booked At:* ${bookingTime}\n*Est. ${mode} Time:* ${deliveryTime}\n*Mode:* ${mode}\n\n*Order Details:*\n${itemsText}\n\n*Total Payable:* ₹${grandTotal}\n${locationLine}\n\nFor updates: +91 63803 94239`;
     setBookingSummary({orderId:finalId,bookingTime,deliveryTime,customerName,customerPhone,mode,address,totalAmount:grandTotal,itemsText,cleanMessage});
     try{localStorage.setItem('ycs_last_order',JSON.stringify({id:finalId,phone:customerPhone}));}catch{}
-    setLookupId(finalId);setCustomerOrder(null);setCartItems([]);const refreshed=await fetchCustomerOrders();if(refreshed.ok)setMyOrders(refreshed.orders||[]);
+    setCustomerOrder(null);setCartItems([]);const refreshed=await fetchCustomerOrders();if(refreshed.ok)setMyOrders(refreshed.orders||[]);
     setToastText(result.whatsappSent?`Order ${finalId} saved! WhatsApp confirmation sent.`:`Order ${finalId} saved! Track it in My Page.`);
   };
-  const handleLookupOrder=async()=>{if(!lookupId.trim()){setLookupError('Enter order ID.');return;}setLookupLoading(true);setLookupError('');setCustomerOrder(null);const r=await fetch('/api/orders?id='+encodeURIComponent(lookupId));const d=await r.json().catch(()=>({}));setLookupLoading(false);if(!r.ok||!d.ok){setLookupError(d.error||'Order not found');return;}setCustomerOrder(d.order);};
   useEffect(()=>{void fetch('/api/auth/session').then(r=>r.json()).then(async d=>{if(d.user){setGoogleUser(d.user);const o=await fetchCustomerOrders();if(o.ok)setMyOrders(o.orders||[]);}}).catch(()=>{});},[]);
   useEffect(()=>{
     let active=true;
@@ -1492,7 +1490,6 @@ export default function App() {
           <motion.section className="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-[#FFFBEB] border-4 border-[#451A03] rounded-[28px] p-5 shadow-2xl">
             <div className="flex justify-between mb-4"><div><h2 className="font-display text-3xl font-extrabold">My Account & Orders</h2><p className="text-sm text-[#78350F]">Sign in once to save and track your orders.</p></div><button type="button" onClick={()=>setMyPageOpen(false)} className="text-2xl" aria-label="Close">×</button></div>
             {!googleUser?<div className="rounded-2xl border-2 border-[#FDE68A] bg-white p-5 text-center"><p className="font-bold mb-3">Continue securely with your Google account</p><div id="google-signin-button" className="flex justify-center min-h-11"/><p className="text-xs text-[#78350F] mt-3">Each Google account has its own private order history.</p></div>:<><div className="flex items-center gap-3 rounded-xl bg-white p-3 border border-[#FDE68A]">{googleUser.picture&&<img src={googleUser.picture} className="w-11 h-11 rounded-full" alt=""/>}<div className="min-w-0 flex-1"><b className="block truncate">{googleUser.name}</b><span className="text-xs text-[#78350F]">{googleUser.email}</span></div><button type="button" onClick={()=>void signOutCustomer()} className="text-sm underline">Sign out</button></div><h3 className="font-display text-xl font-extrabold mt-4">Your orders</h3>{myOrders.length===0?<p className="rounded-xl bg-white p-4 text-sm mt-2">No orders yet. Choose a cake and place your first order.</p>:<div className="space-y-3 mt-2">{myOrders.map(o=><button type="button" key={o.id} onClick={()=>{setLookupId(o.id);setCustomerOrder(o);}} className="w-full text-left rounded-xl bg-white border-2 border-[#FDE68A] p-3"><div className="flex justify-between gap-2"><b>#{o.id}</b><span className="text-xs font-bold">{o.status}</span></div><p className="text-xs text-[#78350F]">{new Date(o.createdAt).toLocaleString('en-IN')}</p><p className="text-sm mt-1">{o.items.map(i=>i.name+' × '+i.qty).join(', ')}</p><b className="text-sm">₹{o.total.toLocaleString('en-IN')}</b></button>)}</div>}{/* Orders are loaded automatically for the signed-in Google account. */}</>}
-            {lookupError&&<p role="alert" className="mt-3 rounded-xl bg-red-50 text-red-800 p-3 text-sm">{lookupError}</p>}
             {customerOrder&&<div className="mt-4 rounded-2xl border-2 border-[#451A03] bg-white p-4 space-y-3"><div><p className="text-xs text-[#78350F]">#{customerOrder.id}</p><h3 className="font-display text-2xl font-extrabold">{customerOrder.status}</h3><p className="text-xs text-[#78350F]">Last updated {new Date(customerOrder.updatedAt).toLocaleString('en-IN')}</p></div><div className="space-y-1 text-sm">{customerOrder.items.map((i,n)=><div key={n} className="flex justify-between"><span>{i.name} × {i.qty}</span><b>₹{(i.price*i.qty).toLocaleString('en-IN')}</b></div>)}<div className="border-t pt-2 flex justify-between font-extrabold"><span>Total</span><span>₹{customerOrder.total.toLocaleString('en-IN')}</span></div></div><b className="text-sm">Status history</b><ol className="space-y-2">{(customerOrder.history||[]).map((x,n)=><li key={n} className="text-sm">🟢 {x.status}<span className="block text-xs text-[#78350F]">{new Date(x.at).toLocaleString('en-IN')}</span></li>)}</ol></div>}
           </motion.section>
         </motion.div>}
