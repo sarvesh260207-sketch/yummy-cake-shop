@@ -88,7 +88,7 @@ export default async function handler(req: any, res: any) {
     if (saved !== 'OK') return res.status(503).json({ ok: false, error: 'Could not reserve your order number. Please try again.' });
     const indexed = await redis(['ZADD', 'orders:index', Date.now(), id]);
     if (Number(indexed) !== 1) {
-      await redis(['DEL', `order:${id}']).catch(() => {});
+      await redis(['DEL', `order:${id}`]).catch(() => {});
       return res.status(503).json({ ok: false, error: 'Order could not be added to the shop order list. Please try again.' });
     }
 
