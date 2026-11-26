@@ -17,7 +17,7 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === 'PATCH') {
       const { id, status } = parseBody(req);
-      if (!/^YCS-\d{4,8}$/.test(String(id)) || !STATUSES.includes(status)) {
+      if (!/^YCS-\d{6}$/.test(String(id)) || !STATUSES.includes(status)) {
         return res.status(400).json({ ok: false, error: 'Invalid order or status' });
       }
       const raw = await redis(['GET', `order:${id}`]);
