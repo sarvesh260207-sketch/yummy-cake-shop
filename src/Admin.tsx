@@ -170,7 +170,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   return (
     <div className="min-h-screen bg-[#FFFBEB] text-[#451A03]">
       <header className="sticky top-0 z-10 bg-[#451A03] text-[#FFFBEB] px-4 py-3 flex items-center justify-between">
-        <div className="font-extrabold text-lg">🎂 SV Bakery · Orders</div>
+        <div className="font-extrabold text-lg">🎂 Yummy Cakes · Orders</div>
         <div className="flex items-center gap-3 text-xs">
           {updatedAt && <span className="hidden sm:inline opacity-70">Updated {updatedAt.toLocaleTimeString('en-IN')}</span>}
           <button onClick={() => void load()} className="px-3 py-1 rounded-full bg-[#FACC15] text-[#451A03] font-bold cursor-pointer">Refresh</button>
@@ -283,7 +283,7 @@ export default function Admin() {
     meta.name = 'robots';
     meta.content = 'noindex,nofollow';
     document.head.appendChild(meta);
-    document.title = 'Admin · SV Bakery';
+    document.title = 'Admin · Yummy Cakes';
     return () => meta.remove();
   }, []);
 
