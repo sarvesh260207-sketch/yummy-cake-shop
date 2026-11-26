@@ -902,7 +902,8 @@ export default function App() {
   const [cartBounceKey, setCartBounceKey] = useState<number>(0);
   const [toastText, setToastText] = useState<string | null>(null);
   const [bookingSummary, setBookingSummary] = useState<BookingSummary | null>(null);
-  const [myPageOpen,setMyPageOpen]=useState(false);\n  const [googleUser,setGoogleUser]=useState<GoogleUser|null>(null); const [myOrders,setMyOrders]=useState<CustomerOrder[]>([]); const [googleReady,setGoogleReady]=useState(false);
+  const [myPageOpen,setMyPageOpen]=useState(false);
+  const [googleUser,setGoogleUser]=useState<GoogleUser|null>(null); const [myOrders,setMyOrders]=useState<CustomerOrder[]>([]);\n  const [googleUser,setGoogleUser]=useState<GoogleUser|null>(null); const [myOrders,setMyOrders]=useState<CustomerOrder[]>([]); const [googleReady,setGoogleReady]=useState(false);
   const [lookupId,setLookupId]=useState(''); const [lookupPhone,setLookupPhone]=useState('');
   const [customerOrder,setCustomerOrder]=useState<CustomerOrder|null>(null);
   const [lookupLoading,setLookupLoading]=useState(false); const [lookupError,setLookupError]=useState(''); const [orderSubmitting,setOrderSubmitting]=useState(false);
@@ -1008,6 +1009,7 @@ export default function App() {
   };
 
   const handleBookCake = async () => {
+    if(!googleUser){setMyPageOpen(true);setToastText('Sign in with Google before placing your order.');return;}
     if(orderSubmitting)return; if(!cartItems.length){setToastText('Add a cake to your box first!');return;}
     const customerName=(document.getElementById('cust-name') as HTMLInputElement|null)?.value.trim()||'';
     const customerPhone=(document.getElementById('cust-phone') as HTMLInputElement|null)?.value.trim()||'';
@@ -1029,8 +1031,10 @@ export default function App() {
     setLookupId(finalId);setLookupPhone(customerPhone);setCustomerOrder(null);setCartItems([]);
     setToastText(result.whatsappSent?`Order ${finalId} saved! WhatsApp confirmation sent.`:`Order ${finalId} saved! Track it in My Page.`);
   };
-  const handleLookupOrder=async()=>{if(!lookupId.trim()||!lookupPhone.trim()){setLookupError('Enter order ID and checkout mobile number.');return;}setLookupLoading(true);setLookupError('');setCustomerOrder(null);const r=await fetchCustomerOrder(lookupId,lookupPhone);setLookupLoading(false);if(!r.ok||!r.order){setLookupError(r.error||'Order not found');return;}setCustomerOrder(r.order);try{localStorage.setItem('ycs_last_order',JSON.stringify({id:r.order.id,phone:lookupPhone}));}catch{}};
-  useEffect(()=>{try{const saved=JSON.parse(localStorage.getItem('ycs_last_order')||'null');if(saved?.id&&saved?.phone){setLookupId(saved.id);setLookupPhone(saved.phone);}}catch{}},[]);
+  const handleLookupOrder=async()=>{if(!lookupId.trim()){setLookupError('Enter order ID.');return;}setLookupLoading(true);setLookupError('');setCustomerOrder(null);const r=await fetch('/api/orders?id='+encodeURIComponent(lookupId));const d=await r.json().catch(()=>({}));setLookupLoading(false);if(!r.ok||!d.ok){setLookupError(d.error||'Order not found');return;}setCustomerOrder(d.order);};
+  useEffect(()=>{void fetch('/api/auth/session').then(r=>r.json()).then(async d=>{if(d.user){setGoogleUser(d.user);const o=await fetchCustomerOrders();if(o.ok)setMyOrders(o.orders||[]);}}).catch(()=>{});},[]);
+  useEffect(()=>{const load=()=>{const g=(window as any).google;if(g?.accounts?.id){g.accounts.id.initialize({client_id:import.meta.env.VITE_GOOGLE_CLIENT_ID,callback:async(response:any)=>{const r=await fetch('/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})});const d=await r.json().catch(()=>({}));if(r.ok&&d.ok){setGoogleUser(d.user);const o=await fetchCustomerOrders();if(o.ok)setMyOrders(o.orders||[]);setToastText('Signed in successfully!');}else setToastText(d.error||'Google sign-in failed');}});const el=document.getElementById('google-signin-button');if(el)g.accounts.id.renderButton(el,{theme:'outline',size:'large',shape:'pill',text:'continue_with',width:260});}};if((window as any).google?.accounts?.id){load();return;}let script=document.getElementById('google-identity-script') as HTMLScriptElement|null;if(!script){script=document.createElement('script');script.id='google-identity-script';script.src='https://accounts.google.com/gsi/client';script.async=true;script.defer=true;script.onload=load;document.head.appendChild(script);}else script.addEventListener('load',load);},[myPageOpen]);
+  const signOutCustomer=async()=>{await fetch('/api/auth/session',{method:'DELETE'});setGoogleUser(null);setMyOrders([]);setCustomerOrder(null);setToastText('Signed out');};
 
   const handleCopyBookingText = () => {
     if (!bookingSummary) return;
