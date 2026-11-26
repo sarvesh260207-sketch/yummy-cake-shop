@@ -173,7 +173,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
         <div className="font-extrabold text-lg">🎂 Yummy Cakes · Orders</div>
         <div className="flex items-center gap-3 text-xs">
           {updatedAt && <span className="hidden sm:inline opacity-70">Updated {updatedAt.toLocaleTimeString('en-IN')}</span>}
-          <button onClick={() => void load()} className="px-3 py-1 rounded-full bg-[#FACC15] text-[#451A03] font-bold cursor-pointer">Refresh</button>
+          <button onClick={() => void load()} className="px-3 py-1 rounded-full bg-[#FACC15] text-[#451A03] font-bold cursor-pointer">Refresh</button>\n          <button onClick={async()=>{await api("/api/admin/session",{method:"DELETE"});onLoggedOut();}} className="px-3 py-1 rounded-full border border-white/60 font-bold cursor-pointer">Sign out</button>
         </div>
       </header>
 
@@ -278,14 +278,44 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
 }
 
 export default function Admin() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
   useEffect(() => {
     const meta = document.createElement('meta');
     meta.name = 'robots';
     meta.content = 'noindex,nofollow';
     document.head.appendChild(meta);
     document.title = 'Admin · Yummy Cakes';
+    void api('/api/admin/session').then(({ data }) => setAuthenticated(!!data.authenticated)).finally(() => setChecking(false));
     return () => meta.remove();
   }, []);
 
-  return <Dashboard onLoggedOut={() => {}} />;
+  const login = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setError('');
+    const { status, data } = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+    setBusy(false);
+    if (status === 200 && data.ok) { setAuthenticated(true); setPassword(''); }
+    else setError(data.error || 'Could not sign in');
+  };
+
+  if (checking) return <div className="min-h-screen grid place-items-center bg-[#FFFBEB] font-bold text-[#451A03]">Checking admin session…</div>;
+  if (!authenticated) return (
+    <main className="min-h-screen bg-[#FFFBEB] flex items-center justify-center p-4 text-[#451A03]">
+      <form onSubmit={login} className="w-full max-w-sm rounded-3xl border-2 border-[#451A03] bg-white p-7 shadow-xl space-y-4">
+        <div className="text-center"><div className="text-4xl">🎂</div><h1 className="text-2xl font-extrabold mt-2">Shop Admin</h1><p className="text-sm text-[#78350F]">Sign in to manage customer orders</p></div>
+        <label className="block text-sm font-bold">Username<input autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)} required className="mt-1 w-full rounded-xl border-2 border-[#FDE68A] p-3" placeholder="Admin username"/></label>
+        <label className="block text-sm font-bold">Password<input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required className="mt-1 w-full rounded-xl border-2 border-[#FDE68A] p-3" placeholder="Admin password"/></label>
+        {error&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+        <button disabled={busy} className="w-full rounded-xl border-2 border-[#451A03] bg-[#FACC15] p-3 font-extrabold disabled:opacity-60">{busy?'Signing in…':'Sign in'}</button>
+        <a href="/" className="block text-center text-sm underline">← Back to shop</a>
+      </form>
+    </main>
+  );
+  return <Dashboard onLoggedOut={() => setAuthenticated(false)} />;
 }
