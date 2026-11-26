@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Admin from './Admin';
 
 interface CartItem {
   id: number | string;
@@ -14,7 +15,8 @@ interface CartItem {
   qty: number;
 }
 
-interface CustomerOrder { id:string; customerName:string; items:{name:string;weight:string;qty:number;price:number}[]; total:number; mode:string; deliveryTime:string; status:string; createdAt:string; updatedAt:string; history:{status:string;at:string}[]; }
+interface CustomerOrder { id:string; customerName:string; customerPhone:string; items:{name:string;weight:string;qty:number;price:number}[]; total:number; mode:string; deliveryTime:string; status:string; createdAt:string; updatedAt:string; history:{status:string;at:string}[]; }
+interface GoogleUser { sub:string; email:string; name:string; picture?:string; }
 
 interface BookingSummary {
   orderId: string;
@@ -730,7 +732,7 @@ async function submitOrder(
   }
 }
 
-async function fetchCustomerOrder(id:string, phone:string):Promise<{ok:boolean;order?:CustomerOrder;error?:string}>{ try { const q=new URLSearchParams({id,phone}); const r=await fetch('/api/orders?'+q.toString()); const d=await r.json().catch(()=>({})); return r.ok&&d.ok?{ok:true,order:d.order}:{ok:false,error:d.error||'Order not found'}; } catch { return {ok:false,error:'Could not connect to the shop'}; } }
+async function fetchCustomerOrders():Promise<{ok:boolean;orders?:CustomerOrder[];error?:string}>{ try { const r=await fetch('/api/orders'); const d=await r.json().catch(()=>({})); return r.ok&&d.ok?{ok:true,orders:d.orders}:{ok:false,error:d.error||'Could not load orders'}; } catch { return {ok:false,error:'Could not connect to the shop'}; } }
 
 function CakeImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
   const [failed, setFailed] = useState(false);
@@ -903,7 +905,8 @@ export default function App() {
   const [toastText, setToastText] = useState<string | null>(null);
   const [bookingSummary, setBookingSummary] = useState<BookingSummary | null>(null);
   const [myPageOpen,setMyPageOpen]=useState(false);
-  const [lookupId,setLookupId]=useState(''); const [lookupPhone,setLookupPhone]=useState('');
+  const [googleUser,setGoogleUser]=useState<GoogleUser|null>(null); const [myOrders,setMyOrders]=useState<CustomerOrder[]>([]);
+  const [lookupId,setLookupId]=useState('');
   const [customerOrder,setCustomerOrder]=useState<CustomerOrder|null>(null);
   const [lookupLoading,setLookupLoading]=useState(false); const [lookupError,setLookupError]=useState(''); const [orderSubmitting,setOrderSubmitting]=useState(false);
 
@@ -911,6 +914,14 @@ export default function App() {
   const heroSectionRef = useRef<HTMLElement | null>(null);
   const cyclePassIndexRef = useRef(0);
   const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/admin';
+  const isSignInRoute = typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/signin';
+
+  useEffect(() => {
+    if (isSignInRoute) {
+      setShowIntro(false);
+      setMyPageOpen(true);
+    }
+  }, [isSignInRoute]);
 
   useEffect(() => {
     const hero = heroSectionRef.current;
@@ -1008,6 +1019,7 @@ export default function App() {
   };
 
   const handleBookCake = async () => {
+    if(!googleUser){setMyPageOpen(true);setToastText('Sign in with Google before placing your order.');return;}
     if(orderSubmitting)return; if(!cartItems.length){setToastText('Add a cake to your box first!');return;}
     const customerName=(document.getElementById('cust-name') as HTMLInputElement|null)?.value.trim()||'';
     const customerPhone=(document.getElementById('cust-phone') as HTMLInputElement|null)?.value.trim()||'';
@@ -1015,22 +1027,50 @@ export default function App() {
     const address=(document.getElementById('cust-address') as HTMLInputElement|null)?.value.trim()||'Chrompet, Chennai';
     const digits=customerPhone.replace(/\D/g,''); if(!customerName||!/^(?:[6-9]\d{9}|91[6-9]\d{9})$/.test(digits)){setToastText('Enter your name and a valid Indian mobile number.');return;}
     setOrderSubmitting(true);setBookingSummary(null);setToastText('Saving your order…');
-    const requestedId='YCS-'+Math.floor(100000+Math.random()*900000); const now=new Date();
+    const now=new Date();
     const bookingTime=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
     const deliveryTime=new Date(now.getTime()+45*60000).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
     const itemsText=cartItems.map((item,i)=>`${i+1}. ${item.name} (${item.weight}) x ${item.qty} = ₹${item.price*item.qty}`).join('\n');
-    const result=await submitOrder({orderId:requestedId,customerName,customerPhone,mode,address,deliveryTime,total:grandTotal,items:cartItems.map(i=>({name:i.name,weight:i.weight,qty:i.qty,price:i.price}))});
+    const result=await submitOrder({customerName,customerPhone,mode,address,deliveryTime,total:grandTotal,items:cartItems.map(i=>({name:i.name,weight:i.weight,qty:i.qty,price:i.price}))});
     setOrderSubmitting(false); if(!result.ok||!result.orderId){setToastText(result.error||'Order was not placed. Please try again.');return;}
     const finalId=result.orderId; const map='https://maps.google.com/?q=Chrompet,+Chennai,+Tamil+Nadu+600044';
     const locationLine=mode==='Pickup'?`Pickup Store: Yummy Cake Shop, GST Road, Chromepet\nMap: ${map}`:`Delivery Address: ${address}`;
     const cleanMessage=`🎂 *YUMMY CAKE SHOP (CHROMEPET) - ORDER RECEIVED*\nHello *${customerName}*! We have received your order.\n\n*Booking ID:* #${finalId}\n*Booked At:* ${bookingTime}\n*Est. ${mode} Time:* ${deliveryTime}\n*Mode:* ${mode}\n\n*Order Details:*\n${itemsText}\n\n*Total Payable:* ₹${grandTotal}\n${locationLine}\n\nFor updates: +91 63803 94239`;
     setBookingSummary({orderId:finalId,bookingTime,deliveryTime,customerName,customerPhone,mode,address,totalAmount:grandTotal,itemsText,cleanMessage});
     try{localStorage.setItem('ycs_last_order',JSON.stringify({id:finalId,phone:customerPhone}));}catch{}
-    setLookupId(finalId);setLookupPhone(customerPhone);setCustomerOrder(null);setCartItems([]);
+    setLookupId(finalId);setCustomerOrder(null);setCartItems([]);const refreshed=await fetchCustomerOrders();if(refreshed.ok)setMyOrders(refreshed.orders||[]);
     setToastText(result.whatsappSent?`Order ${finalId} saved! WhatsApp confirmation sent.`:`Order ${finalId} saved! Track it in My Page.`);
   };
-  const handleLookupOrder=async()=>{if(!lookupId.trim()||!lookupPhone.trim()){setLookupError('Enter order ID and checkout mobile number.');return;}setLookupLoading(true);setLookupError('');setCustomerOrder(null);const r=await fetchCustomerOrder(lookupId,lookupPhone);setLookupLoading(false);if(!r.ok||!r.order){setLookupError(r.error||'Order not found');return;}setCustomerOrder(r.order);try{localStorage.setItem('ycs_last_order',JSON.stringify({id:r.order.id,phone:lookupPhone}));}catch{}};
-  useEffect(()=>{try{const saved=JSON.parse(localStorage.getItem('ycs_last_order')||'null');if(saved?.id&&saved?.phone){setLookupId(saved.id);setLookupPhone(saved.phone);}}catch{}},[]);
+  const handleLookupOrder=async()=>{if(!lookupId.trim()){setLookupError('Enter order ID.');return;}setLookupLoading(true);setLookupError('');setCustomerOrder(null);const r=await fetch('/api/orders?id='+encodeURIComponent(lookupId));const d=await r.json().catch(()=>({}));setLookupLoading(false);if(!r.ok||!d.ok){setLookupError(d.error||'Order not found');return;}setCustomerOrder(d.order);};
+  useEffect(()=>{void fetch('/api/auth/session').then(r=>r.json()).then(async d=>{if(d.user){setGoogleUser(d.user);const o=await fetchCustomerOrders();if(o.ok)setMyOrders(o.orders||[]);}}).catch(()=>{});},[]);
+  useEffect(()=>{
+    let active=true;
+    const setup=async()=>{
+      try{
+        const cfg=await fetch('/api/auth/google-config').then(r=>r.json());
+        if(!active||!cfg.clientId){if(active)setToastText('Google sign-in is not configured yet.');return;}
+        const init=()=>{
+          const g=(window as any).google;
+          if(!active||!g?.accounts?.id)return;
+          g.accounts.id.initialize({client_id:cfg.clientId,callback:async(response:any)=>{
+            const r=await fetch('/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})});
+            const d=await r.json().catch(()=>({}));
+            if(r.ok&&d.ok){setGoogleUser(d.user);const o=await fetchCustomerOrders();if(o.ok)setMyOrders(o.orders||[]);setToastText('Signed in successfully!');}
+            else setToastText(d.error||'Google sign-in failed');
+          }});
+          const el=document.getElementById('google-signin-button');
+          if(el)g.accounts.id.renderButton(el,{theme:'outline',size:'large',shape:'pill',text:'continue_with',width:260});
+        };
+        if((window as any).google?.accounts?.id){init();return;}
+        let script=document.getElementById('google-identity-script') as HTMLScriptElement|null;
+        if(!script){script=document.createElement('script');script.id='google-identity-script';script.src='https://accounts.google.com/gsi/client';script.async=true;script.defer=true;script.onload=init;document.head.appendChild(script);}
+        else script.addEventListener('load',init,{once:true});
+      }catch{if(active)setToastText('Could not load Google sign-in. Please try again.');}
+    };
+    if(myPageOpen&&!googleUser)void setup();
+    return()=>{active=false;};
+  },[myPageOpen,googleUser]);
+  const signOutCustomer=async()=>{await fetch('/api/auth/session',{method:'DELETE'});setGoogleUser(null);setMyOrders([]);setCustomerOrder(null);setToastText('Signed out');};
 
   const handleCopyBookingText = () => {
     if (!bookingSummary) return;
@@ -1045,6 +1085,8 @@ export default function App() {
     const url = `https://wa.me/${targetNumber}?text=${encodeURIComponent(bookingSummary.cleanMessage)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
+
+  if (isAdminRoute) return <Admin />;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFFBEB] via-[#FEF3C7]/70 to-[#FFFBEB] text-[#451A03] selection:bg-[#FACC15] selection:text-[#451A03]">
@@ -1062,7 +1104,7 @@ export default function App() {
 
 
       <AnimatePresence>
-        {showIntro && <IntroVideo onFinish={() => setShowIntro(false)} />}
+        {showIntro && !isSignInRoute && <IntroVideo onFinish={() => setShowIntro(false)} />}
       </AnimatePresence>
 
       <div className="bg-[#451A03] text-[#FFFBEB] px-4 py-2 text-center text-xs sm:text-sm font-semibold flex flex-wrap items-center justify-center gap-2">
@@ -1098,7 +1140,7 @@ export default function App() {
               <span>⚡ Custom Hero Cake</span>
             </a>
 
-            <button type="button" onClick={()=>{setMyPageOpen(true);setCustomerOrder(null);setLookupError('');}} className="bg-white text-[#451A03] border-2 border-[#451A03] px-3 py-2.5 rounded-2xl font-bold text-sm">My Page</button>
+            <button type="button" onClick={()=>{setMyPageOpen(true);setCustomerOrder(null);setLookupError('');}} className="bg-white text-[#451A03] border-2 border-[#451A03] px-3 py-2.5 rounded-2xl font-bold text-sm">{googleUser?'My Orders':'Sign in / Orders'}</button>
             <motion.button
               key={cartBounceKey}
               animate={cartBounceKey > 0 ? { scale: [1, 1.22, 0.92, 1.08, 1], rotate: [0, -6, 6, -2, 0] } : {}}
@@ -1448,15 +1490,10 @@ export default function App() {
       <AnimatePresence>
         {myPageOpen && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[60] bg-[#451A03]/70 p-3 flex items-center justify-center" onClick={e=>{if(e.target===e.currentTarget)setMyPageOpen(false);}}>
           <motion.section className="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-[#FFFBEB] border-4 border-[#451A03] rounded-[28px] p-5 shadow-2xl">
-            <div className="flex justify-between mb-4"><div><h2 className="font-display text-3xl font-extrabold">My Page</h2><p className="text-sm text-[#78350F]">Track your cake order.</p></div><button type="button" onClick={()=>setMyPageOpen(false)} className="text-2xl">×</button></div>
-            <form onSubmit={e=>{e.preventDefault();void handleLookupOrder();}} className="space-y-3">
-              <label className="block text-sm font-bold">Order ID<input value={lookupId} onChange={e=>setLookupId(e.target.value.toUpperCase())} placeholder="YCS-123456" className="mt-1 w-full rounded-xl border-2 border-[#451A03] bg-white p-3" /></label>
-              <label className="block text-sm font-bold">Checkout mobile number<input value={lookupPhone} onChange={e=>setLookupPhone(e.target.value)} inputMode="tel" placeholder="10-digit mobile number" className="mt-1 w-full rounded-xl border-2 border-[#451A03] bg-white p-3" /></label>
-              <button disabled={lookupLoading} className="w-full rounded-xl border-2 border-[#451A03] bg-[#FACC15] p-3 font-extrabold">{lookupLoading?'Checking…':'Track My Order'}</button>
-            </form>
+            <div className="flex justify-between mb-4"><div><h2 className="font-display text-3xl font-extrabold">My Account & Orders</h2><p className="text-sm text-[#78350F]">Sign in once to save and track your orders.</p></div><button type="button" onClick={()=>setMyPageOpen(false)} className="text-2xl" aria-label="Close">×</button></div>
+            {!googleUser?<div className="rounded-2xl border-2 border-[#FDE68A] bg-white p-5 text-center"><p className="font-bold mb-3">Continue securely with your Google account</p><div id="google-signin-button" className="flex justify-center min-h-11"/><p className="text-xs text-[#78350F] mt-3">Each Google account has its own private order history.</p></div>:<><div className="flex items-center gap-3 rounded-xl bg-white p-3 border border-[#FDE68A]">{googleUser.picture&&<img src={googleUser.picture} className="w-11 h-11 rounded-full" alt=""/>}<div className="min-w-0 flex-1"><b className="block truncate">{googleUser.name}</b><span className="text-xs text-[#78350F]">{googleUser.email}</span></div><button type="button" onClick={()=>void signOutCustomer()} className="text-sm underline">Sign out</button></div><h3 className="font-display text-xl font-extrabold mt-4">Your orders</h3>{myOrders.length===0?<p className="rounded-xl bg-white p-4 text-sm mt-2">No orders yet. Choose a cake and place your first order.</p>:<div className="space-y-3 mt-2">{myOrders.map(o=><button type="button" key={o.id} onClick={()=>{setLookupId(o.id);setCustomerOrder(o);}} className="w-full text-left rounded-xl bg-white border-2 border-[#FDE68A] p-3"><div className="flex justify-between gap-2"><b>#{o.id}</b><span className="text-xs font-bold">{o.status}</span></div><p className="text-xs text-[#78350F]">{new Date(o.createdAt).toLocaleString('en-IN')}</p><p className="text-sm mt-1">{o.items.map(i=>i.name+' × '+i.qty).join(', ')}</p><b className="text-sm">₹{o.total.toLocaleString('en-IN')}</b></button>)}</div>}<form onSubmit={e=>{e.preventDefault();void handleLookupOrder();}} className="space-y-2 mt-4"><label className="block text-sm font-bold">Track by order ID<input value={lookupId} onChange={e=>setLookupId(e.target.value.toUpperCase())} placeholder="YCS-000001" className="mt-1 w-full rounded-xl border-2 border-[#451A03] bg-white p-3"/></label><button disabled={lookupLoading} className="w-full rounded-xl border-2 border-[#451A03] bg-[#FACC15] p-3 font-extrabold">{lookupLoading?'Checking…':'Track order'}</button></form></>}
             {lookupError&&<p role="alert" className="mt-3 rounded-xl bg-red-50 text-red-800 p-3 text-sm">{lookupError}</p>}
-            {customerOrder&&<div className="mt-4 rounded-2xl border-2 border-[#451A03] bg-white p-4 space-y-3"><div><p className="text-xs text-[#78350F]">#{customerOrder.id}</p><h3 className="font-display text-2xl font-extrabold">{customerOrder.status}</h3><p className="text-xs text-[#78350F]">Last updated {new Date(customerOrder.updatedAt).toLocaleString('en-IN')}</p></div><div className="space-y-1 text-sm">{customerOrder.items.map((i,n)=><div key={n} className="flex justify-between"><span>{i.name} × {i.qty}</span><b>₹{(i.price*i.qty).toLocaleString('en-IN')}</b></div>)}<div className="border-t pt-2 flex justify-between font-extrabold"><span>Total</span><span>₹{customerOrder.total.toLocaleString('en-IN')}</span></div></div><b className="text-sm">Status history</b><ol className="space-y-2">{customerOrder.history.map((x,n)=><li key={n} className="text-sm">🟢 {x.status}<span className="block text-xs text-[#78350F]">{new Date(x.at).toLocaleString('en-IN')}</span></li>)}</ol><button type="button" onClick={()=>void handleLookupOrder()} className="w-full border-2 border-[#451A03] rounded-xl bg-[#FEF3C7] p-2 font-bold">Refresh status</button></div>}
-            <p className="mt-4 text-xs text-[#78350F]">Order ID and the same mobile number used at checkout are required for privacy.</p>
+            {customerOrder&&<div className="mt-4 rounded-2xl border-2 border-[#451A03] bg-white p-4 space-y-3"><div><p className="text-xs text-[#78350F]">#{customerOrder.id}</p><h3 className="font-display text-2xl font-extrabold">{customerOrder.status}</h3><p className="text-xs text-[#78350F]">Last updated {new Date(customerOrder.updatedAt).toLocaleString('en-IN')}</p></div><div className="space-y-1 text-sm">{customerOrder.items.map((i,n)=><div key={n} className="flex justify-between"><span>{i.name} × {i.qty}</span><b>₹{(i.price*i.qty).toLocaleString('en-IN')}</b></div>)}<div className="border-t pt-2 flex justify-between font-extrabold"><span>Total</span><span>₹{customerOrder.total.toLocaleString('en-IN')}</span></div></div><b className="text-sm">Status history</b><ol className="space-y-2">{(customerOrder.history||[]).map((x,n)=><li key={n} className="text-sm">🟢 {x.status}<span className="block text-xs text-[#78350F]">{new Date(x.at).toLocaleString('en-IN')}</span></li>)}</ol></div>}
           </motion.section>
         </motion.div>}
       </AnimatePresence>
