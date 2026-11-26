@@ -905,7 +905,6 @@ export default function App() {
   const [bookingSummary, setBookingSummary] = useState<BookingSummary | null>(null);
   const [myPageOpen,setMyPageOpen]=useState(false);
   const [googleUser,setGoogleUser]=useState<GoogleUser|null>(null); const [myOrders,setMyOrders]=useState<CustomerOrder[]>([]);
-  const [googleClientId,setGoogleClientId]=useState('');
   const [lookupId,setLookupId]=useState('');
   const [customerOrder,setCustomerOrder]=useState<CustomerOrder|null>(null);
   const [lookupLoading,setLookupLoading]=useState(false); const [lookupError,setLookupError]=useState(''); const [orderSubmitting,setOrderSubmitting]=useState(false);
